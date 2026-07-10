@@ -46,18 +46,6 @@ export const createBooking = onCall<CreateBookingRequest>(
       );
     }
 
-    // Re-check for overlapping bookings server-side so two buyers can't win a race on the same slot.
-    const overlapping = await db
-      .collection("bookings")
-      .where("spotId", "==", spotId)
-      .where("status", "in", ["pending_payment", "confirmed"])
-      .where("endTime", ">", startTime)
-      .get();
-    const conflict = overlapping.docs.some((d) => d.data().startTime < endTime);
-    if (conflict) {
-      throw new HttpsError("already-exists", "This spot is already booked for part of that time range.");
-    }
-
     const hours = (endTime - startTime) / (1000 * 60 * 60);
     const rawTotal =
       spot.pricePerDay && hours >= 24
@@ -71,39 +59,62 @@ export const createBooking = onCall<CreateBookingRequest>(
     }
 
     const bookingRef = db.collection("bookings").doc();
-    const stripe = getStripeClient();
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: totalPriceCents,
-      currency: "cad",
-      automatic_payment_methods: { enabled: true },
-      application_fee_amount: platformFeeCents,
-      transfer_data: {
-        destination: seller.stripeConnectAccountId,
-      },
-      metadata: {
-        bookingId: bookingRef.id,
+    // Firestore tracks queries read inside a transaction, not just documents, so this
+    // retries automatically if a concurrent booking for an overlapping slot commits first -
+    // closing the race that a plain read-then-write would leave open.
+    await db.runTransaction(async (transaction) => {
+      const overlappingQuery = db
+        .collection("bookings")
+        .where("spotId", "==", spotId)
+        .where("status", "in", ["pending_payment", "confirmed"])
+        .where("endTime", ">", startTime);
+      const overlappingSnap = await transaction.get(overlappingQuery);
+      const conflict = overlappingSnap.docs.some((d) => d.data().startTime < endTime);
+      if (conflict) {
+        throw new HttpsError("already-exists", "This spot is already booked for part of that time range.");
+      }
+
+      transaction.set(bookingRef, {
         spotId,
+        spotTitle: spot.title,
+        spotAddress: spot.address,
         buyerId: uid,
         sellerId: spot.ownerId,
-      },
+        startTime,
+        endTime,
+        totalPriceCents,
+        platformFeeCents,
+        currency: "cad",
+        status: "pending_payment",
+        createdAt: Date.now(),
+      });
     });
 
-    await bookingRef.set({
-      spotId,
-      spotTitle: spot.title,
-      spotAddress: spot.address,
-      buyerId: uid,
-      sellerId: spot.ownerId,
-      startTime,
-      endTime,
-      totalPriceCents,
-      platformFeeCents,
-      currency: "cad",
-      status: "pending_payment",
-      stripePaymentIntentId: paymentIntent.id,
-      createdAt: Date.now(),
-    });
+    const stripe = getStripeClient();
+    let paymentIntent;
+    try {
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: totalPriceCents,
+        currency: "cad",
+        automatic_payment_methods: { enabled: true },
+        application_fee_amount: platformFeeCents,
+        transfer_data: {
+          destination: seller.stripeConnectAccountId,
+        },
+        metadata: {
+          bookingId: bookingRef.id,
+          spotId,
+          buyerId: uid,
+          sellerId: spot.ownerId,
+        },
+      });
+    } catch (stripeError) {
+      await bookingRef.delete();
+      throw stripeError;
+    }
+
+    await bookingRef.update({ stripePaymentIntentId: paymentIntent.id });
 
     return {
       bookingId: bookingRef.id,

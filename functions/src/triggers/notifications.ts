@@ -11,13 +11,17 @@ interface ExpoPushMessage {
 
 async function sendExpoPush(messages: ExpoPushMessage[]) {
   if (messages.length === 0) return;
-  const response = await fetch("https://exp.host/--/api/v2/push/send", {
-    method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify(messages),
-  });
-  if (!response.ok) {
-    logger.error("Expo push send failed", await response.text());
+  try {
+    const response = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify(messages),
+    });
+    if (!response.ok) {
+      logger.error("Expo push send failed", await response.text());
+    }
+  } catch (err) {
+    logger.error("Failed to send Expo push notification due to network error", err);
   }
 }
 

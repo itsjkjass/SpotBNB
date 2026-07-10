@@ -7,6 +7,7 @@ export const completeBookings = onSchedule("every 60 minutes", async () => {
     .collection("bookings")
     .where("status", "==", "confirmed")
     .where("endTime", "<=", now)
+    .limit(500)
     .get();
 
   const batch = db.batch();

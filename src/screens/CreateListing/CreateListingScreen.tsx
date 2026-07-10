@@ -71,6 +71,15 @@ export default function CreateListingScreen({ navigation }: Props) {
       return;
     }
 
+    let dailyPrice: number | undefined;
+    if (pricePerDay) {
+      dailyPrice = parseFloat(pricePerDay);
+      if (Number.isNaN(dailyPrice) || dailyPrice <= 0) {
+        setError("Enter a valid daily price.");
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const geocoded = await Location.geocodeAsync(address);
@@ -89,7 +98,7 @@ export default function CreateListingScreen({ navigation }: Props) {
         location: { latitude, longitude },
         photoUrls,
         pricePerHour: hourlyPrice,
-        pricePerDay: pricePerDay ? parseFloat(pricePerDay) : undefined,
+        pricePerDay: dailyPrice,
         currency: "cad",
         spotType,
         vehicleSizes,

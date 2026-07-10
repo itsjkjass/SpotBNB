@@ -12,7 +12,7 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if isSignedIn();
+      allow read: if isOwner(userId);
       allow create: if isOwner(userId);
       // Stripe account fields are only ever written by Cloud Functions (admin SDK bypasses rules).
       allow update: if isOwner(userId)
