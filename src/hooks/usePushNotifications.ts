@@ -22,23 +22,29 @@ export function usePushNotifications() {
     if (!user || !Device.isDevice) return;
 
     (async () => {
-      const existing = await Notifications.getPermissionsAsync();
-      let finalStatus = existing.status;
-      if (finalStatus !== "granted") {
-        const requested = await Notifications.requestPermissionsAsync();
-        finalStatus = requested.status;
-      }
-      if (finalStatus !== "granted") return;
+      try {
+        const existing = await Notifications.getPermissionsAsync();
+        let finalStatus = existing.status;
+        if (finalStatus !== "granted") {
+          const requested = await Notifications.requestPermissionsAsync();
+          finalStatus = requested.status;
+        }
+        if (finalStatus !== "granted") return;
 
-      if (Platform.OS === "android") {
-        await Notifications.setNotificationChannelAsync("default", {
-          name: "default",
-          importance: Notifications.AndroidImportance.DEFAULT,
-        });
-      }
+        if (Platform.OS === "android") {
+          await Notifications.setNotificationChannelAsync("default", {
+            name: "default",
+            importance: Notifications.AndroidImportance.DEFAULT,
+          });
+        }
 
-      const tokenResponse = await Notifications.getExpoPushTokenAsync();
-      await setDoc(doc(db, "users", user.uid), { expoPushToken: tokenResponse.data }, { merge: true });
+        const tokenResponse = await Notifications.getExpoPushTokenAsync();
+        await setDoc(doc(db, "users", user.uid), { expoPushToken: tokenResponse.data }, { merge: true });
+      } catch (error) {
+        // Remote push tokens require a development build (unsupported in Expo Go on newer SDKs) -
+        // this is expected there and shouldn't block the rest of the app.
+        console.warn("Push notification registration skipped:", error);
+      }
     })();
   }, [user]);
 }
