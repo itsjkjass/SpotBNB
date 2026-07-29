@@ -11,7 +11,7 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { getBooking, cancelBooking } from "../../services/bookings";
 import { submitReview } from "../../services/reviews";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../hooks/useAuth";
 import { Booking } from "../../types/models";
 import { colors, spacing, radius } from "../../constants/theme";
 import type { BookingsStackParamList } from "../../navigation/types";
@@ -27,6 +27,16 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
+  // Current timestamp updated every second to avoid calling Date.now() during render
+  const [now, setNow] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     getBooking(bookingId)
@@ -45,29 +55,34 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
   const isBuyer = booking.buyerId === user.uid;
   const canCancel =
     (booking.status === "pending_payment" || booking.status === "confirmed") &&
-    booking.startTime > Date.now();
+    booking.startTime > now;
   const canReview = isBuyer && booking.status === "completed" && !reviewSubmitted;
 
   const handleCancel = () => {
-    Alert.alert("Cancel booking", "Are you sure you want to cancel this booking?", [
-      { text: "No", style: "cancel" },
-      {
-        text: "Yes, cancel",
-        style: "destructive",
-        onPress: async () => {
-          setBusy(true);
-          try {
-            await cancelBooking(bookingId);
-            const refreshed = await getBooking(bookingId);
-            setBooking(refreshed);
-          } catch (e: any) {
-            Alert.alert("Couldn't cancel", e.message ?? "Please try again.");
-          } finally {
-            setBusy(false);
-          }
+    Alert.alert(
+      "Cancel booking",
+      "Are you sure you want to cancel this booking?",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes, cancel",
+          style: "destructive",
+          onPress: async () => {
+            setBusy(true);
+            try {
+              await cancelBooking(bookingId);
+              const refreshed = await getBooking(bookingId);
+              setBooking(refreshed);
+            } catch (e: unknown) {
+              const message = (e as Error)?.message ?? "Please try again.";
+              Alert.alert("Couldn't cancel", message);
+            } finally {
+              setBusy(false);
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   const handleSubmitReview = async () => {
@@ -82,8 +97,9 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
         comment,
       });
       setReviewSubmitted(true);
-    } catch (e: any) {
-      Alert.alert("Couldn't submit review", e.message ?? "Please try again.");
+    } catch (e: unknown) {
+      const message = (e as Error)?.message ?? "Please try again.";
+      Alert.alert("Couldn't submit review", message);
     } finally {
       setBusy(false);
     }
@@ -122,7 +138,10 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
           <Text style={styles.sectionTitle}>Leave a review</Text>
           <View style={styles.starRow}>
             {[1, 2, 3, 4, 5].map((n) => (
-              <TouchableOpacity key={n} onPress={() => setRating(n)}>
+              <TouchableOpacity
+                key={n}
+                onPress={() => setRating(n)}
+              >
                 <Text style={[styles.star, n <= rating && styles.starActive]}>★</Text>
               </TouchableOpacity>
             ))}
@@ -173,7 +192,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: spacing.md,
   },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
   reviewSection: { marginTop: spacing.xl },
   sectionTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: spacing.sm },
   starRow: { flexDirection: "row", gap: spacing.xs, marginBottom: spacing.md },

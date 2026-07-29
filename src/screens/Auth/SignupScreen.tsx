@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  View,
   Text,
   TextInput,
   TouchableOpacity,
@@ -36,8 +35,9 @@ export default function SignupScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await signUp(email.trim(), password, name.trim());
-    } catch (e: any) {
-      setError(e.message?.replace("Firebase: ", "") ?? "Failed to sign up.");
+    } catch (e: unknown) {
+      const message = (e as Error)?.message?.replace("Firebase: ", "") ?? "Failed to sign up.";
+      setError(message);
     } finally {
       setLoading(false);
     }

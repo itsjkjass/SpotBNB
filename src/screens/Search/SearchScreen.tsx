@@ -40,6 +40,7 @@ export default function SearchScreen({ navigation }: Props) {
           });
         }
       } catch (error) {
+         
         console.warn("Failed to get current location:", error);
       }
     })();
@@ -89,7 +90,7 @@ export default function SearchScreen({ navigation }: Props) {
         >
           <Text style={styles.cardTitle}>{selectedSpot.title}</Text>
           <Text style={styles.cardAddress}>{selectedSpot.address}</Text>
-          <Text style={styles.cardPrice}>${selectedSpot.pricePerHour.toFixed(2)} CAD/hr</Text>
+          <Text style={styles.cardPrice}>{selectedSpot.pricePerHour.toFixed(2)} CAD/hr</Text>
         </TouchableOpacity>
       )}
 

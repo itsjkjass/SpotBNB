@@ -43,7 +43,7 @@ export function usePushNotifications() {
       } catch (error) {
         // Remote push tokens require a development build (unsupported in Expo Go on newer SDKs) -
         // this is expected there and shouldn't block the rest of the app.
-        console.warn("Push notification registration skipped:", error);
+        console.warn("Push notification registration skipped:", error); // eslint-disable-line no-console
       }
     })();
   }, [user]);

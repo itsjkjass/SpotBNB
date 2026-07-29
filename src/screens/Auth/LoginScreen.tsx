@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  View,
   Text,
   TextInput,
   TouchableOpacity,
@@ -31,8 +30,9 @@ export default function LoginScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await logIn(email.trim(), password);
-    } catch (e: any) {
-      setError(e.message?.replace("Firebase: ", "") ?? "Failed to log in.");
+    } catch (e: unknown) {
+      const message = (e as Error)?.message?.replace("Firebase: ", "") ?? "Failed to log in.";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -69,7 +69,7 @@ export default function LoginScreen({ navigation }: Props) {
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
-        <Text style={styles.link}>Don't have an account? Sign up</Text>
+        <Text style={styles.link}>Don&apos;t have an account? Sign up</Text>
       </TouchableOpacity>
     </KeyboardAvoidingView>
   );

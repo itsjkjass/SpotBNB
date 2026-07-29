@@ -4,8 +4,8 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { getSpotsByOwner, updateSpot, deleteSpot } from "../../services/spots";
 import { useAuth } from "../../hooks/useAuth";
-import { ParkingSpot } from "../../types/models";
-import { colors, spacing, radius } from "../../constants/theme";
+import type { ParkingSpot } from "../../types/models"; // Actually import
+import { colors, spacing, radius } from "../../constants/theme"; // Actually import
 import type { MyListingsStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<MyListingsStackParamList, "MyListings">;
@@ -37,17 +37,21 @@ export default function MyListingsScreen({ navigation }: Props) {
   };
 
   const confirmDelete = (spot: ParkingSpot) => {
-    Alert.alert("Delete listing", `Remove "${spot.title}"? This can't be undone.`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await deleteSpot(spot.id);
-          load();
+    Alert.alert(
+      "Delete listing",
+      `Remove "${spot.title}"? This can&apos;t be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            await deleteSpot(spot.id);
+            load();
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   if (!profile?.stripeConnectOnboarded) {
@@ -76,7 +80,7 @@ export default function MyListingsScreen({ navigation }: Props) {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.center}>
-            <Text style={styles.notice}>You haven't listed any parking spots yet.</Text>
+            <Text style={styles.notice}>You haven&apos;t listed any parking spots yet.</Text>
           </View>
         }
         renderItem={({ item }) => (

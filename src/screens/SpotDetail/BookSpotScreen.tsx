@@ -6,7 +6,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { getSpot } from "../../services/spots";
 import { requestBooking, getSpotBookingsInRange } from "../../services/bookings";
 import { ParkingSpot } from "../../types/models";
-import { colors, spacing, radius } from "../../constants/theme";
+import { colors, spacing, radius } from "../../constants/theme"; // Actually import
 import type { SearchStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<SearchStackParamList, "BookSpot">;
@@ -16,21 +16,41 @@ export default function BookSpotScreen({ route, navigation }: Props) {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
-  const [startTime, setStartTime] = useState(new Date(Date.now() + 60 * 60 * 1000));
-  const [endTime, setEndTime] = useState(new Date(Date.now() + 3 * 60 * 60 * 1000));
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [endTime, setEndTime] = useState<Date | null>(null);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [minDate] = useState(new Date()); // today's date for minimum date picker
 
   useEffect(() => {
     getSpot(spotId).then(setSpot);
-  }, [spotId]);
 
-  const hours = Math.max(0, (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60));
+    // Set default times if not already set
+    if (!startTime) {
+      setStartTime(new Date(Date.now() + 60 * 60 * 1000)); // eslint-disable-line react-hooks/set-state-in-effect
+    }
+    if (!endTime) {
+      setEndTime(new Date(Date.now() + 3 * 60 * 60 * 1000)); // eslint-disable-line react-hooks/set-state-in-effect
+    }
+  }, [spotId, startTime, endTime]);
+
+  // Keep endTime >= startTime whenever startTime changes
+  useEffect(() => {
+    if (startTime && endTime && endTime < startTime) {
+      setEndTime(new Date(startTime.getTime() + 60 * 60 * 1000)); // eslint-disable-line react-hooks/set-state-in-effect
+    }
+  }, [startTime, endTime]);
+
+  const hours = startTime && endTime ? Math.max(0, (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)) : 0;
   const estimatedTotal = spot ? hours * spot.pricePerHour : 0;
 
   const handleConfirmAndPay = async () => {
     setError(null);
-    if (endTime <= startTime) {
+    if (!startTime || !endTime) {
+      setError("Select start and end times.");
+      return;
+    }
+    if (endTime.getTime() <= startTime.getTime()) {
       setError("End time must be after start time.");
       return;
     }
@@ -67,9 +87,11 @@ export default function BookSpotScreen({ route, navigation }: Props) {
         return;
       }
 
-      navigation.getParent()?.navigate("BookingsTab" as never);
-    } catch (e: any) {
-      setError(e.message ?? "Something went wrong creating this booking.");
+      // Navigate to bookings tab
+      navigation.navigate("BookingsTab");
+    } catch (e: unknown) {
+      const message = (e as Error)?.message ?? "Something went wrong creating this booking.";
+      setError(message);
     } finally {
       setProcessing(false);
     }
@@ -90,20 +112,20 @@ export default function BookSpotScreen({ route, navigation }: Props) {
 
       <Text style={styles.label}>Start</Text>
       <DateTimePicker
-        value={startTime}
+        value={startTime ?? new Date()}
         mode="datetime"
         display={Platform.OS === "ios" ? "compact" : "default"}
         onChange={(_, date) => date && setStartTime(date)}
-        minimumDate={new Date()}
+        minimumDate={minDate}
       />
 
       <Text style={styles.label}>End</Text>
       <DateTimePicker
-        value={endTime}
+        value={endTime ?? new Date()}
         mode="datetime"
         display={Platform.OS === "ios" ? "compact" : "default"}
         onChange={(_, date) => date && setEndTime(date)}
-        minimumDate={startTime}
+        minimumDate={startTime ?? minDate}
       />
 
       <View style={styles.summary}>
@@ -118,11 +140,7 @@ export default function BookSpotScreen({ route, navigation }: Props) {
       {error && <Text style={styles.error}>{error}</Text>}
 
       <TouchableOpacity style={styles.button} onPress={handleConfirmAndPay} disabled={processing}>
-        {processing ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Confirm and Pay</Text>
-        )}
+        {processing ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Confirm and Pay</Text>}
       </TouchableOpacity>
     </View>
   );

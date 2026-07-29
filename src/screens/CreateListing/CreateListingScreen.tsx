@@ -39,7 +39,7 @@ export default function CreateListingScreen({ navigation }: Props) {
 
   const toggleVehicleSize = (size: VehicleSize) => {
     setVehicleSizes((current) =>
-      current.includes(size) ? current.filter((s) => s !== size) : [...current, size]
+      current.includes(size) ? current.filter((v) => v !== size) : [...current, size]
     );
   };
 
@@ -107,8 +107,9 @@ export default function CreateListingScreen({ navigation }: Props) {
       });
 
       navigation.goBack();
-    } catch (e: any) {
-      setError(e.message ?? "Failed to create listing.");
+    } catch (e: unknown) {
+      const message = (e as Error)?.message ?? "Failed to create listing.";
+      setError(message);
     } finally {
       setSubmitting(false);
     }

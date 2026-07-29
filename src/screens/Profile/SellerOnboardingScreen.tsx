@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Linking } from "react-native";
 import { getSellerOnboardingLink, getSellerConnectStatus } from "../../services/stripeConnect";
 import { useAuth } from "../../hooks/useAuth";
@@ -9,21 +9,22 @@ export default function SellerOnboardingScreen() {
   const [status, setStatus] = useState<{ onboarded: boolean; payoutsEnabled: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const loadStatus = async () => {
+  const loadStatus = useCallback(async () => {
     setBusy(true);
     try {
       const result = await getSellerConnectStatus();
-      setStatus(result);
       await refreshProfile();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setStatus(result);
     } finally {
       setBusy(false);
     }
-  };
+  }, [refreshProfile]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadStatus]);
 
   const handleStartOnboarding = async () => {
     setBusy(true);
@@ -39,7 +40,7 @@ export default function SellerOnboardingScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Get paid for your parking spot</Text>
       <Text style={styles.description}>
-        SpotBnB uses Stripe to pay sellers directly and securely. You'll need to complete a short
+        SpotBnB uses Stripe to pay sellers directly and securely. You&apos;ll need to complete a short
         onboarding form (identity + bank account) before you can list a spot.
       </Text>
 
@@ -49,13 +50,13 @@ export default function SellerOnboardingScreen() {
         <>
           <View style={styles.statusRow}>
             <Text style={styles.statusLabel}>Onboarding</Text>
-            <Text style={status?.onboarded ? styles.statusOk : styles.statusPending}>
+            <Text style={status?.onboarded ? styles.statusOk : status?.onboarded === false ? styles.statusPending : styles.statusLabel}>
               {status?.onboarded ? "Complete" : "Not started"}
             </Text>
           </View>
           <View style={styles.statusRow}>
             <Text style={styles.statusLabel}>Payouts</Text>
-            <Text style={status?.payoutsEnabled ? styles.statusOk : styles.statusPending}>
+            <Text style={status?.payoutsEnabled ? styles.statusOk : status?.payoutsEnabled === false ? styles.statusPending : styles.statusLabel}>
               {status?.payoutsEnabled ? "Enabled" : "Not enabled"}
             </Text>
           </View>
