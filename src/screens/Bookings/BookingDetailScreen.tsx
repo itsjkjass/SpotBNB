@@ -11,7 +11,7 @@ import {
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { getBooking, cancelBooking } from "../../services/bookings";
 import { submitReview } from "../../services/reviews";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../../hooks/useAuth";
 import { Booking } from "../../types/models";
 import { colors, spacing, radius } from "../../constants/theme";
 import type { BookingsStackParamList } from "../../navigation/types";

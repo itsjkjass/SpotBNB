@@ -87,8 +87,7 @@ export default function BookSpotScreen({ route, navigation }: Props) {
         return;
       }
 
-      // Navigate to bookings tab
-      navigation.navigate("BookingsTab");
+      navigation.getParent()?.navigate("BookingsTab" as never);
     } catch (e: unknown) {
       const message = (e as Error)?.message ?? "Something went wrong creating this booking.";
       setError(message);

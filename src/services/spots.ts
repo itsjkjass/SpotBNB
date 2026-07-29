@@ -50,6 +50,12 @@ export async function getSpot(spotId: string): Promise<ParkingSpot | null> {
   return { id: snapshot.id, ...snapshot.data() } as ParkingSpot;
 }
 
+export async function getActiveSpots(): Promise<ParkingSpot[]> {
+  const q = query(spotsCollection, where("isActive", "==", true), orderBy("createdAt", "desc"));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as ParkingSpot);
+}
+
 export async function getSpotsByOwner(ownerId: string): Promise<ParkingSpot[]> {
   const q = query(spotsCollection, where("ownerId", "==", ownerId), orderBy("createdAt", "desc"));
   const snapshot = await getDocs(q);
