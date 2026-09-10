@@ -51,20 +51,3 @@ export async function cancelBooking(bookingId: string) {
   const cancel = httpsCallable(functions, "cancelBooking");
   await cancel({ bookingId });
 }
-
-export async function getSpotBookingsInRange(
-  spotId: string,
-  rangeStart: number,
-  rangeEnd: number
-): Promise<Booking[]> {
-  const q = query(
-    bookingsCollection,
-    where("spotId", "==", spotId),
-    where("status", "in", ["pending_payment", "confirmed"]),
-    where("endTime", ">", rangeStart)
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs
-    .map((d) => ({ id: d.id, ...d.data() }) as Booking)
-    .filter((b) => b.startTime < rangeEnd);
-}

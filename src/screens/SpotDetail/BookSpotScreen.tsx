@@ -4,7 +4,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useStripe } from "@stripe/stripe-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { getSpot } from "../../services/spots";
-import { requestBooking, getSpotBookingsInRange } from "../../services/bookings";
+import { requestBooking } from "../../services/bookings";
 import { ParkingSpot } from "../../types/models";
 import { colors, spacing, radius } from "../../constants/theme"; // Actually import
 import type { SearchStackParamList } from "../../navigation/types";
@@ -57,12 +57,7 @@ export default function BookSpotScreen({ route, navigation }: Props) {
 
     setProcessing(true);
     try {
-      const overlapping = await getSpotBookingsInRange(spotId, startTime.getTime(), endTime.getTime());
-      if (overlapping.length > 0) {
-        setError("This spot is already booked for part of that time range. Pick a different time.");
-        return;
-      }
-
+      // The server checks availability; clients can only read their own bookings.
       const { paymentIntentClientSecret } = await requestBooking({
         spotId,
         startTime: startTime.getTime(),
