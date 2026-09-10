@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Platform } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
+import BookingDateTimePicker from "../../components/BookingDateTimePicker";
 import { useStripe } from "@stripe/stripe-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { getSpot } from "../../services/spots";
@@ -105,20 +105,18 @@ export default function BookSpotScreen({ route, navigation }: Props) {
       <Text style={styles.address}>{spot.address}</Text>
 
       <Text style={styles.label}>Start</Text>
-      <DateTimePicker
+      <BookingDateTimePicker
         value={startTime ?? new Date()}
-        mode="datetime"
-        display={Platform.OS === "ios" ? "compact" : "default"}
-        onChange={(_, date) => date && setStartTime(date)}
+        onChange={setStartTime}
+        disabled={processing}
         minimumDate={minDate}
       />
 
       <Text style={styles.label}>End</Text>
-      <DateTimePicker
+      <BookingDateTimePicker
         value={endTime ?? new Date()}
-        mode="datetime"
-        display={Platform.OS === "ios" ? "compact" : "default"}
-        onChange={(_, date) => date && setEndTime(date)}
+        onChange={setEndTime}
+        disabled={processing}
         minimumDate={startTime ?? minDate}
       />
 

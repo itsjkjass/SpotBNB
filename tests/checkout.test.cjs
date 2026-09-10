@@ -20,7 +20,7 @@ test('checkout reaches server reservation and PaymentSheet without reading priva
     react,
     'react-native': { View: 'View', Text: 'Text', ActivityIndicator: 'ActivityIndicator',
       TouchableOpacity: 'Button', Platform: { OS: 'ios' }, StyleSheet: { create: (styles) => styles } },
-    '@react-native-community/datetimepicker': { default: 'DateTimePicker' },
+    '../../components/BookingDateTimePicker': { default: 'DateTimePicker' },
     '@stripe/stripe-react-native': { useStripe: () => ({
       initPaymentSheet: async (params) => { calls.push(['init', params]); return {}; },
       presentPaymentSheet: async () => { calls.push(['present']); return {}; },
