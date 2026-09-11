@@ -45,6 +45,9 @@ export const stripeWebhook = onRequest(
           break;
         }
         case "payment_intent.payment_failed":
+          // A decline is retryable on the same PaymentIntent. Keep the slot
+          // reserved so a later success can confirm this booking safely.
+          break;
         case "payment_intent.canceled": {
           const intent = event.data.object as Stripe.PaymentIntent;
           const bookingId = intent.metadata?.bookingId;
