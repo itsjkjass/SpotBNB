@@ -36,7 +36,15 @@ export const cancelBooking = onCall<CancelBookingRequest>(
     if (booking.stripePaymentIntentId) {
       const intent = await stripe.paymentIntents.retrieve(booking.stripePaymentIntentId);
       if (intent.status === "succeeded") {
-        await stripe.refunds.create({ payment_intent: booking.stripePaymentIntentId });
+        await stripe.refunds.create(
+          {
+            payment_intent: booking.stripePaymentIntentId,
+            reverse_transfer: true,
+            refund_application_fee: true,
+          },
+          // Reuse the refund if Stripe succeeded but the Firestore update failed.
+          { idempotencyKey: `cancel-booking-${bookingId}` }
+        );
       } else if (intent.status !== "canceled") {
         await stripe.paymentIntents.cancel(booking.stripePaymentIntentId);
       }
