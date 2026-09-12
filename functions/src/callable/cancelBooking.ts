@@ -32,22 +32,30 @@ export const cancelBooking = onCall<CancelBookingRequest>(
       throw new HttpsError("failed-precondition", "This booking has already started.");
     }
 
+    // createBooking saves the reservation before creating its Stripe intent.
+    // Releasing the slot before that intent can be cancelled could allow a
+    // later payment to succeed for an already-cancelled booking.
+    if (!booking.stripePaymentIntentId) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Payment details are not available yet. Please try cancelling again shortly."
+      );
+    }
+
     const stripe = getStripeClient();
-    if (booking.stripePaymentIntentId) {
-      const intent = await stripe.paymentIntents.retrieve(booking.stripePaymentIntentId);
-      if (intent.status === "succeeded") {
-        await stripe.refunds.create(
-          {
-            payment_intent: booking.stripePaymentIntentId,
-            reverse_transfer: true,
-            refund_application_fee: true,
-          },
-          // Reuse the refund if Stripe succeeded but the Firestore update failed.
-          { idempotencyKey: `cancel-booking-${bookingId}` }
-        );
-      } else if (intent.status !== "canceled") {
-        await stripe.paymentIntents.cancel(booking.stripePaymentIntentId);
-      }
+    const intent = await stripe.paymentIntents.retrieve(booking.stripePaymentIntentId);
+    if (intent.status === "succeeded") {
+      await stripe.refunds.create(
+        {
+          payment_intent: booking.stripePaymentIntentId,
+          reverse_transfer: true,
+          refund_application_fee: true,
+        },
+        // Reuse the refund if Stripe succeeded but the Firestore update failed.
+        { idempotencyKey: `cancel-booking-${bookingId}` }
+      );
+    } else if (intent.status !== "canceled") {
+      await stripe.paymentIntents.cancel(booking.stripePaymentIntentId);
     }
 
     await bookingRef.update({ status: "cancelled" });

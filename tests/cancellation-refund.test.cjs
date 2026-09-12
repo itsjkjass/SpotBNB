@@ -5,11 +5,13 @@ const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
 
-function fixture({ intentStatus = 'succeeded', failUpdateOnce = false, refundError = false } = {}) {
-  const booking = { buyerId: 'buyer', sellerId: 'seller', status: 'confirmed',
-    startTime: Date.now() + 3600000, stripePaymentIntentId: 'pi_test' };
+function fixture({ intentStatus = 'succeeded', failUpdateOnce = false, refundError = false,
+  paymentIntentId = 'pi_test', bookingStatus = 'confirmed', cancellationError = false } = {}) {
+  const booking = { buyerId: 'buyer', sellerId: 'seller', status: bookingStatus,
+    startTime: Date.now() + 3600000, stripePaymentIntentId: paymentIntentId };
   const refundCalls = [];
   const cancellations = [];
+  const retrievals = [];
   const cachedRefunds = new Map();
   let refundCount = 0;
   let failUpdate = failUpdateOnce;
@@ -28,8 +30,11 @@ function fixture({ intentStatus = 'succeeded', failUpdateOnce = false, refundErr
     }) }) } },
     '../stripeClient': { getStripeClient: () => ({
       paymentIntents: {
-        retrieve: async () => ({ status: intentStatus }),
-        cancel: async (id) => cancellations.push(id),
+        retrieve: async (id) => { retrievals.push(id); return { status: intentStatus }; },
+        cancel: async (id) => {
+          if (cancellationError) throw new Error('Payment cancellation failed');
+          cancellations.push(id);
+        },
       },
       refunds: { create: async (params, options) => {
         refundCalls.push({ params, options });
@@ -55,7 +60,7 @@ function fixture({ intentStatus = 'succeeded', failUpdateOnce = false, refundErr
     assert.ok(name in dependencies, `Unexpected dependency ${name}`);
     return dependencies[name];
   } });
-  return { booking, refundCalls, cancellations, refundCount: () => refundCount,
+  return { booking, refundCalls, cancellations, retrievals, refundCount: () => refundCount,
     cancel: (uid = 'buyer') => exports.cancelBooking({
       auth: uid ? { uid } : undefined, data: { bookingId: 'booking' },
     }),
@@ -113,4 +118,36 @@ test('unauthenticated users and unrelated users cannot refund', async () => {
     assert.equal(f.refundCalls.length, 0);
     assert.equal(f.booking.status, 'confirmed');
   }
+});
+
+test('cancellation during payment setup retains the slot until the intent can be cancelled', async () => {
+  const f = fixture({ paymentIntentId: null, bookingStatus: 'pending_payment',
+    intentStatus: 'requires_payment_method' });
+  await assert.rejects(f.cancel(), (error) => error.code === 'failed-precondition');
+  assert.equal(f.booking.status, 'pending_payment');
+  assert.equal(f.retrievals.length, 0);
+  assert.equal(f.cancellations.length, 0);
+  assert.equal(f.refundCalls.length, 0);
+
+  // createBooking finishes saving the intent after the first cancellation attempt.
+  f.booking.stripePaymentIntentId = 'pi_created_later';
+  await f.cancel();
+  assert.deepEqual(f.retrievals, ['pi_created_later']);
+  assert.deepEqual(f.cancellations, ['pi_created_later']);
+  assert.equal(f.booking.status, 'cancelled');
+});
+
+test('confirmed booking with missing payment reference is not released without a refund', async () => {
+  const f = fixture({ paymentIntentId: null });
+  await assert.rejects(f.cancel(), (error) => error.code === 'failed-precondition');
+  assert.equal(f.booking.status, 'confirmed');
+  assert.equal(f.retrievals.length, 0);
+});
+
+test('failed Stripe cancellation keeps the pending reservation', async () => {
+  const f = fixture({ bookingStatus: 'pending_payment', intentStatus: 'requires_payment_method',
+    cancellationError: true });
+  await assert.rejects(f.cancel(), /Payment cancellation failed/);
+  assert.equal(f.booking.status, 'pending_payment');
+  assert.equal(f.refundCalls.length, 0);
 });
