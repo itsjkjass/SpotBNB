@@ -13,7 +13,11 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isOwner(userId);
-      allow create: if isOwner(userId);
+      // Signup may initialize onboarding to false, but only the backend may
+      // attach a Stripe account or mark onboarding complete.
+      allow create: if isOwner(userId)
+        && !request.resource.data.keys().hasAny(['stripeConnectAccountId'])
+        && request.resource.data.get('stripeConnectOnboarded', false) == false;
       // Stripe account fields are only ever written by Cloud Functions (admin SDK bypasses rules).
       allow update: if isOwner(userId)
         && !request.resource.data.diff(resource.data).affectedKeys()
