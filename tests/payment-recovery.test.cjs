@@ -57,7 +57,7 @@ function fixture({ timeoutOnce = false, failSaveOnce = false } = {}) {
     'firebase-functions/v2': { logger: { error() {}, warn() {} } },
     '../admin': { db }, '../stripeClient': { getStripeClient: () => stripe },
     '../config': { stripeSecretKey: {}, PLATFORM_FEE_PERCENT: 12,
-      PAYMENT_RECOVERY_WINDOW_MS: 23 * 3600000, PAYMENT_RECHECK_MS: 300000 },
+      PAYMENT_RECOVERY_WINDOW_MS: 23 * 3600000, PAYMENT_RECHECK_MS: 300000, PAYMENT_HOLD_MS: 900000 },
   };
   const { createBooking } = loadBackend('callable/createBooking.ts', dependencies);
   return { calls, bookingRef, booking: () => booking, intent: () => remoteIntent,
@@ -84,6 +84,7 @@ test('initial setup saves a recoverable payment request before contacting Stripe
   assert.equal(f.booking().stripePaymentIntentId, 'pi_recovered');
   assert.equal(f.booking().paymentIntentRequest.transfer_data.destination, 'acct_seller');
   assert.equal(typeof f.booking().paymentReconcileAt, 'number');
+  assert.equal(f.booking().paymentExpiresAt - f.booking().createdAt, 900000);
 });
 
 test('retry after an ambiguous Stripe timeout uses the exact saved request and key', async () => {

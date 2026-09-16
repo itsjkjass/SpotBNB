@@ -2,7 +2,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { logger } from "firebase-functions/v2";
 import { db } from "../admin";
 import { stripeSecretKey, PAYMENT_RECHECK_MS } from "../config";
-import { getOrCreateBookingPayment, syncBookingPaymentStatus } from "../services/bookingPayment";
+import { expireBookingPayment, getOrCreateBookingPayment, syncBookingPaymentStatus } from "../services/bookingPayment";
 
 export const reconcileBookingPayments = onSchedule(
   { schedule: "every 5 minutes", secrets: [stripeSecretKey], timeoutSeconds: 540, maxInstances: 1 },
@@ -21,7 +21,10 @@ export const reconcileBookingPayments = onSchedule(
       await Promise.all(snapshot.docs.slice(offset, offset + 5).map(async (document) => {
         try {
           const intent = await getOrCreateBookingPayment(document.ref);
-          if (intent) await syncBookingPaymentStatus(document.ref, intent);
+          if (intent) {
+            const reconciled = await expireBookingPayment(document.ref, intent);
+            await syncBookingPaymentStatus(document.ref, reconciled);
+          }
         } catch {
           logger.error("Payment reconciliation failed; reservation retained", { bookingId: document.id });
         }

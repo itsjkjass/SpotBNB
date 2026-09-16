@@ -1,6 +1,6 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db } from "../admin";
-import { stripeSecretKey, PLATFORM_FEE_PERCENT } from "../config";
+import { stripeSecretKey, PLATFORM_FEE_PERCENT, PAYMENT_HOLD_MS } from "../config";
 import { getOrCreateBookingPayment } from "../services/bookingPayment";
 import type Stripe from "stripe";
 
@@ -100,6 +100,7 @@ export const createBooking = onCall<CreateBookingRequest>(
         createdAt,
         paymentIntentRequest,
         paymentReconcileAt: createdAt + 60_000,
+        paymentExpiresAt: createdAt + PAYMENT_HOLD_MS,
       });
     });
 

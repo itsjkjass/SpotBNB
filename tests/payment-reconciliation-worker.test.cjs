@@ -27,6 +27,7 @@ function fixture(count = 3) {
     'firebase-functions/v2': { logger: { error: (...args) => errors.push(args) } },
     '../admin': { db }, '../config': { stripeSecretKey: {}, PAYMENT_RECHECK_MS: 300000 },
     '../services/bookingPayment': {
+      expireBookingPayment: async (_, intent) => intent,
       getOrCreateBookingPayment: async (record) => {
         recovered.push(record.id);
         if (record.id === '0') throw new Error('Stripe unavailable');

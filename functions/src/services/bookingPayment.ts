@@ -42,6 +42,30 @@ export async function getOrCreateBookingPayment(bookingRef: DocumentReference) {
   return intent;
 }
 
+export async function expireBookingPayment(bookingRef: DocumentReference, intent: Stripe.PaymentIntent) {
+  const booking = (await bookingRef.get()).data();
+  if (!booking || booking.status !== "pending_payment" || booking.stripePaymentIntentId !== intent.id ||
+      !Number.isFinite(booking.paymentExpiresAt) || Date.now() < booking.paymentExpiresAt) return intent;
+
+  // Keep processing/authorized payments reserved. A deadline alone never proves
+  // that a payment cannot still succeed.
+  if (!["requires_payment_method", "requires_confirmation", "requires_action"].includes(intent.status)) return intent;
+  const stripe = getStripeClient();
+  let result: Stripe.PaymentIntent;
+  try {
+    result = await stripe.paymentIntents.cancel(intent.id, { cancellation_reason: "abandoned" });
+  } catch {
+    // Cancellation may race with success or its response may be lost. Only an
+    // authoritative terminal state may release or confirm the reservation.
+    result = await stripe.paymentIntents.retrieve(intent.id);
+  }
+  if (result.id !== intent.id || result.metadata.bookingId !== bookingRef.id ||
+      result.amount !== booking.totalPriceCents || result.currency !== booking.currency) {
+    throw new Error("Payment does not match its booking.");
+  }
+  return result;
+}
+
 export async function syncBookingPaymentStatus(bookingRef: DocumentReference, intent: Stripe.PaymentIntent) {
   if (intent.status !== "succeeded" && intent.status !== "canceled") return;
   await db.runTransaction(async (transaction) => {
