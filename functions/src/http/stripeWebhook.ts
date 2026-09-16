@@ -24,13 +24,15 @@ export const stripeWebhook = onRequest(
       return;
     }
 
-    async function transitionBooking(bookingId: string, nextStatus: "confirmed" | "cancelled") {
+    async function transitionBooking(bookingId: string, nextStatus: "confirmed" | "cancelled", intentId: string) {
       const bookingRef = db.collection("bookings").doc(bookingId);
       await db.runTransaction(async (transaction) => {
         const bookingSnap = await transaction.get(bookingRef);
         if (!bookingSnap.exists) return;
-        if (bookingSnap.data()!.status !== "pending_payment") return;
-        transaction.update(bookingRef, { status: nextStatus });
+        const booking = bookingSnap.data()!;
+        if (booking.status !== "pending_payment") return;
+        if (booking.stripePaymentIntentId && booking.stripePaymentIntentId !== intentId) return;
+        transaction.update(bookingRef, { status: nextStatus, stripePaymentIntentId: intentId });
       });
     }
 
@@ -40,7 +42,7 @@ export const stripeWebhook = onRequest(
           const intent = event.data.object as Stripe.PaymentIntent;
           const bookingId = intent.metadata?.bookingId;
           if (bookingId) {
-            await transitionBooking(bookingId, "confirmed");
+            await transitionBooking(bookingId, "confirmed", intent.id);
           }
           break;
         }
@@ -52,7 +54,7 @@ export const stripeWebhook = onRequest(
           const intent = event.data.object as Stripe.PaymentIntent;
           const bookingId = intent.metadata?.bookingId;
           if (bookingId) {
-            await transitionBooking(bookingId, "cancelled");
+            await transitionBooking(bookingId, "cancelled", intent.id);
           }
           break;
         }

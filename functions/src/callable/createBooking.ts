@@ -1,7 +1,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db } from "../admin";
-import { getStripeClient } from "../stripeClient";
 import { stripeSecretKey, PLATFORM_FEE_PERCENT } from "../config";
+import { getOrCreateBookingPayment } from "../services/bookingPayment";
+import type Stripe from "stripe";
 
 interface CreateBookingRequest {
   spotId: string;
@@ -59,6 +60,15 @@ export const createBooking = onCall<CreateBookingRequest>(
     }
 
     const bookingRef = db.collection("bookings").doc();
+    const createdAt = Date.now();
+    const paymentIntentRequest: Stripe.PaymentIntentCreateParams = {
+      amount: totalPriceCents,
+      currency: "cad",
+      automatic_payment_methods: { enabled: true },
+      application_fee_amount: platformFeeCents,
+      transfer_data: { destination: seller.stripeConnectAccountId },
+      metadata: { bookingId: bookingRef.id, spotId, buyerId: uid, sellerId: spot.ownerId },
+    };
 
     // Firestore tracks queries read inside a transaction, not just documents, so this
     // retries automatically if a concurrent booking for an overlapping slot commits first -
@@ -87,34 +97,18 @@ export const createBooking = onCall<CreateBookingRequest>(
         platformFeeCents,
         currency: "cad",
         status: "pending_payment",
-        createdAt: Date.now(),
+        createdAt,
+        paymentIntentRequest,
+        paymentReconcileAt: createdAt + 60_000,
       });
     });
 
-    const stripe = getStripeClient();
-    let paymentIntent;
-    try {
-      paymentIntent = await stripe.paymentIntents.create({
-        amount: totalPriceCents,
-        currency: "cad",
-        automatic_payment_methods: { enabled: true },
-        application_fee_amount: platformFeeCents,
-        transfer_data: {
-          destination: seller.stripeConnectAccountId,
-        },
-        metadata: {
-          bookingId: bookingRef.id,
-          spotId,
-          buyerId: uid,
-          sellerId: spot.ownerId,
-        },
-      });
-    } catch (stripeError) {
-      await bookingRef.delete();
-      throw stripeError;
+    // A timeout does not prove that Stripe failed to create the intent. Keep
+    // the reservation and request so the scheduled worker can recover it.
+    const paymentIntent = await getOrCreateBookingPayment(bookingRef);
+    if (!paymentIntent?.client_secret || paymentIntent.status === "canceled") {
+      throw new HttpsError("failed-precondition", "This booking is no longer awaiting payment.");
     }
-
-    await bookingRef.update({ stripePaymentIntentId: paymentIntent.id });
 
     return {
       bookingId: bookingRef.id,

@@ -4,3 +4,4 @@ export { createConnectOnboardingLink, getConnectAccountStatus } from "./callable
 export { stripeWebhook } from "./http/stripeWebhook";
 export { onBookingCreatedNotifySeller, onBookingStatusChangedNotifyBuyer } from "./triggers/notifications";
 export { completeBookings } from "./scheduled/completeBookings";
+export { reconcileBookingPayments } from "./scheduled/reconcileBookingPayments";

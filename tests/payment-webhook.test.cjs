@@ -103,3 +103,18 @@ test('missing or invalid signature rejects event without changing booking', asyn
     assert.equal(f.writes(), 0);
   }
 });
+
+test('webhook attaches the intent ID if setup failed before saving it', async () => {
+  const f = fixture();
+  await f.deliver('payment_intent.succeeded');
+  assert.equal(f.booking.stripePaymentIntentId, 'pi_test');
+  assert.equal(f.booking.status, 'confirmed');
+});
+
+test('event for a different intent cannot confirm this booking', async () => {
+  const f = fixture();
+  f.booking.stripePaymentIntentId = 'pi_other';
+  await f.deliver('payment_intent.succeeded');
+  assert.equal(f.booking.status, 'pending_payment');
+  assert.equal(f.writes(), 0);
+});
