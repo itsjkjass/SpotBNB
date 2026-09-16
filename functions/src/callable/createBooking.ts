@@ -18,8 +18,17 @@ export const createBooking = onCall<CreateBookingRequest>(
       throw new HttpsError("unauthenticated", "You must be signed in to book a spot.");
     }
 
+    if (!request.data || typeof request.data !== "object" || Array.isArray(request.data)) {
+      throw new HttpsError("invalid-argument", "Invalid booking request.");
+    }
     const { spotId, startTime, endTime } = request.data;
-    if (!spotId || !startTime || !endTime || endTime <= startTime) {
+    if (typeof spotId !== "string" || !spotId.trim() || spotId.includes("/") ||
+        spotId === "." || spotId === "..") {
+      throw new HttpsError("invalid-argument", "Invalid parking spot ID.");
+    }
+    if (!Number.isSafeInteger(startTime) || !Number.isSafeInteger(endTime) ||
+        !Number.isFinite(new Date(startTime).getTime()) || !Number.isFinite(new Date(endTime).getTime()) ||
+        endTime <= startTime) {
       throw new HttpsError("invalid-argument", "Invalid booking time range.");
     }
     if (startTime < Date.now() - 60_000) {
@@ -47,6 +56,11 @@ export const createBooking = onCall<CreateBookingRequest>(
       );
     }
 
+    if (typeof spot.pricePerHour !== "number" || !Number.isFinite(spot.pricePerHour) || spot.pricePerHour <= 0 ||
+        (spot.pricePerDay != null && (typeof spot.pricePerDay !== "number" ||
+          !Number.isFinite(spot.pricePerDay) || spot.pricePerDay <= 0))) {
+      throw new HttpsError("failed-precondition", "This parking spot has invalid pricing. Please contact the seller.");
+    }
     const hours = (endTime - startTime) / (1000 * 60 * 60);
     const rawTotal =
       spot.pricePerDay && hours >= 24
@@ -55,8 +69,10 @@ export const createBooking = onCall<CreateBookingRequest>(
     const totalPriceCents = Math.round(rawTotal * 100);
     const platformFeeCents = Math.round((totalPriceCents * PLATFORM_FEE_PERCENT) / 100);
 
-    if (totalPriceCents < 50) {
-      throw new HttpsError("invalid-argument", "Booking total is below the minimum chargeable amount.");
+    // Stripe accepts integer amounts with at most eight digits. Reject before
+    // reserving the spot so an invalid amount cannot leave an unpaid hold.
+    if (!Number.isSafeInteger(totalPriceCents) || totalPriceCents < 50 || totalPriceCents > 99_999_999) {
+      throw new HttpsError("invalid-argument", "Booking total is outside the supported payment range.");
     }
 
     const bookingRef = db.collection("bookings").doc();
