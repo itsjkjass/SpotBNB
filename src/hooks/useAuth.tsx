@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { User } from "firebase/auth";
 import { subscribeToAuthState, getUserProfile } from "../services/auth";
 import { UserProfile } from "../types/models";
@@ -22,32 +22,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshProfile = async (uid?: string) => {
-    const id = uid ?? user?.uid;
-    if (!id) {
-      setProfile(null);
-      return;
-    }
-    const p = await getUserProfile(id);
-    setProfile(p);
-  };
+  const session = useRef({ uid: null as string | null, version: 0, request: 0, active: false });
 
-  useEffect(() => {
-    const unsubscribe = subscribeToAuthState(async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        await refreshProfile(firebaseUser.uid);
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
-    });
-    return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  const refreshProfile = useCallback(async () => {
+    const { uid, version, active } = session.current;
+    if (!active || !uid) return;
+    const request = ++session.current.request;
+    const p = await getUserProfile(uid);
+    // A late response must not restore a signed-out user's profile or replace
+    // the result of a newer refresh (including a new login to the same account).
+    if (session.current.active && session.current.version === version && session.current.request === request) {
+      setProfile(p);
+    }
   }, []);
 
+  useEffect(() => {
+    const currentSession = session.current;
+    currentSession.active = true;
+    const unsubscribe = subscribeToAuthState((firebaseUser) => {
+      const version = ++session.current.version;
+      session.current.uid = firebaseUser?.uid ?? null;
+      setUser(firebaseUser);
+      setProfile(null);
+      if (firebaseUser) {
+        setLoading(true);
+        void refreshProfile().catch(() => {
+          // Leave the profile unavailable; a failed read must not trap the
+          // entire app on the authentication spinner. Manual refresh can retry.
+        }).finally(() => {
+          if (session.current.active && session.current.version === version) setLoading(false);
+        });
+      } else {
+        setLoading(false);
+      }
+    });
+    return () => {
+      currentSession.active = false;
+      currentSession.version++;
+      unsubscribe();
+    };
+  }, [refreshProfile]);
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, refreshProfile: () => refreshProfile() }}>
+    <AuthContext.Provider value={{ user, profile, loading, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

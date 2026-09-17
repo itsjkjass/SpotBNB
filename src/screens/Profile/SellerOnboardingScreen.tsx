@@ -8,14 +8,17 @@ export default function SellerOnboardingScreen() {
   const { refreshProfile } = useAuth();
   const [status, setStatus] = useState<{ onboarded: boolean; payoutsEnabled: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadStatus = useCallback(async () => {
     setBusy(true);
+    setError(null);
     try {
       const result = await getSellerConnectStatus();
       await refreshProfile();
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatus(result);
+    } catch {
+      setError("Unable to refresh payout status. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -28,9 +31,12 @@ export default function SellerOnboardingScreen() {
 
   const handleStartOnboarding = async () => {
     setBusy(true);
+    setError(null);
     try {
       const url = await getSellerOnboardingLink("spotbnb://onboarding-complete", "spotbnb://onboarding-complete");
       await Linking.openURL(url);
+    } catch {
+      setError("Unable to open payout setup. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -43,6 +49,8 @@ export default function SellerOnboardingScreen() {
         SpotBnB uses Stripe to pay sellers directly and securely. You&apos;ll need to complete a short
         onboarding form (identity + bank account) before you can list a spot.
       </Text>
+
+      {error ? <Text accessibilityRole="alert" style={{ color: colors.danger, marginTop: spacing.md }}>{error}</Text> : null}
 
       {busy && !status ? (
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: spacing.xl }} />
