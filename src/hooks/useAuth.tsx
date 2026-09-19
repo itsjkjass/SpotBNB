@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { User } from "firebase/auth";
-import { subscribeToAuthState, getUserProfile } from "../services/auth";
+import { subscribeToAuthState, subscribeToUserProfile, getUserProfile } from "../services/auth";
 import { UserProfile } from "../types/models";
 
 interface AuthContextValue {
@@ -39,18 +39,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const currentSession = session.current;
     currentSession.active = true;
+    let unsubscribeProfile: (() => void) | undefined;
     const unsubscribe = subscribeToAuthState((firebaseUser) => {
       const version = ++session.current.version;
+      unsubscribeProfile?.();
+      unsubscribeProfile = undefined;
       session.current.uid = firebaseUser?.uid ?? null;
       setUser(firebaseUser);
       setProfile(null);
       if (firebaseUser) {
         setLoading(true);
-        void refreshProfile().catch(() => {
-          // Leave the profile unavailable; a failed read must not trap the
-          // entire app on the authentication spinner. Manual refresh can retry.
-        }).finally(() => {
-          if (session.current.active && session.current.version === version) setLoading(false);
+        // Auth may fire before signUp writes the profile. Keep listening after
+        // a missing snapshot so that successful creation reaches the UI.
+        unsubscribeProfile = subscribeToUserProfile(firebaseUser.uid, (nextProfile) => {
+          if (!currentSession.active || currentSession.version !== version) return;
+          currentSession.request++;
+          setProfile(nextProfile);
+          setLoading(false);
+        }, () => {
+          if (!currentSession.active || currentSession.version !== version) return;
+          currentSession.request++;
+          setProfile(null);
+          setLoading(false);
         });
       } else {
         setLoading(false);
@@ -59,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       currentSession.active = false;
       currentSession.version++;
+      unsubscribeProfile?.();
       unsubscribe();
     };
   }, [refreshProfile]);

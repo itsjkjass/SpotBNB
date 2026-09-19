@@ -9,6 +9,11 @@ function fixture() {
   const view = mount('src/hooks/useAuth.tsx', 'AuthProvider', {
     '../services/auth': {
       subscribeToAuthState: callback => { notify = callback; return () => { unsubscribed = true; }; },
+      subscribeToUserProfile: (uid, resolve, reject) => {
+        const listener = { uid, resolve, reject, stopped: false };
+        requests.push(listener);
+        return () => { listener.stopped = true; };
+      },
       getUserProfile: uid => new Promise((resolve, reject) => requests.push({ uid, resolve, reject })),
     },
   });
@@ -24,6 +29,42 @@ test('failed initial profile read exits authentication loading', async () => {
   await flush();
   assert.equal(f.state().loading, false);
   assert.equal(f.state().profile, null);
+});
+
+test('profile created after the first missing snapshot appears without another login', async () => {
+  const f = fixture();
+  f.emit({ uid: 'a' });
+  f.requests[0].resolve(null);
+  await flush();
+  assert.equal(f.state().profile, null);
+  f.requests[0].resolve({ uid: 'a', displayName: 'New signup' });
+  await flush();
+  assert.equal(f.state().profile?.displayName, 'New signup');
+  assert.equal(f.requests.length, 1);
+});
+
+test('profile subscriptions are stopped on account switch, sign-out and unmount', () => {
+  const f = fixture();
+  f.emit({ uid: 'a' });
+  f.emit({ uid: 'b' });
+  assert.equal(f.requests[0].stopped, true);
+  f.emit(null);
+  assert.equal(f.requests[1].stopped, true);
+  f.emit({ uid: 'c' });
+  f.view.unmount();
+  assert.equal(f.requests[2].stopped, true);
+});
+
+test('new profile snapshot takes precedence over an older manual read', async () => {
+  const f = fixture();
+  f.emit({ uid: 'a' });
+  f.requests[0].resolve(null);
+  await flush();
+  const read = f.state().refreshProfile();
+  f.requests[0].resolve({ uid: 'a', displayName: 'Created' });
+  f.requests[1].resolve(null);
+  await read;
+  assert.equal(f.state().profile?.displayName, 'Created');
 });
 
 test('late profile cannot restore a signed-out user', async () => {

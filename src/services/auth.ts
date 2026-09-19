@@ -6,12 +6,22 @@ import {
   onAuthStateChanged,
   User,
 } from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import { UserProfile } from "../types/models";
 
 export function subscribeToAuthState(callback: (user: User | null) => void) {
   return onAuthStateChanged(auth, callback);
+}
+
+export function subscribeToUserProfile(
+  uid: string,
+  onChange: (profile: UserProfile | null) => void,
+  onError: (error: Error) => void
+) {
+  return onSnapshot(doc(db, "users", uid), (snapshot) => {
+    onChange(snapshot.exists() ? snapshot.data() as UserProfile : null);
+  }, onError);
 }
 
 export async function signUp(email: string, password: string, displayName: string) {
