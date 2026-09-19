@@ -21,8 +21,10 @@ export async function createSpot(
   ownerId: string,
   data: Omit<ParkingSpot, "id" | "ownerId" | "isActive" | "averageRating" | "reviewCount" | "createdAt" | "updatedAt">
 ) {
+  const { pricePerDay, ...listing } = data;
   const docRef = await addDoc(spotsCollection, {
-    ...data,
+    ...listing,
+    ...(pricePerDay === undefined ? {} : { pricePerDay }),
     ownerId,
     isActive: true,
     averageRating: 0,
