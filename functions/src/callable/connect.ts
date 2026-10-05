@@ -1,14 +1,10 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { db } from "../admin";
+import { app, db } from "../admin";
 import { getStripeClient } from "../stripeClient";
 import { stripeSecretKey } from "../config";
+import { createRefreshToken, onboardingCallbacks } from "../connectOnboarding";
 
-interface OnboardingLinkRequest {
-  returnUrl: string;
-  refreshUrl: string;
-}
-
-export const createConnectOnboardingLink = onCall<OnboardingLinkRequest>(
+export const createConnectOnboardingLink = onCall(
   { secrets: [stripeSecretKey] },
   async (request) => {
     const uid = request.auth?.uid;
@@ -41,12 +37,10 @@ export const createConnectOnboardingLink = onCall<OnboardingLinkRequest>(
       await userRef.update({ stripeConnectAccountId: accountId, stripeConnectOnboarded: false });
     }
 
-    const { returnUrl, refreshUrl } = request.data;
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
       type: "account_onboarding",
-      return_url: returnUrl,
-      refresh_url: refreshUrl,
+      ...onboardingCallbacks(app.options.projectId!, createRefreshToken(accountId, stripeSecretKey.value())),
     });
 
     return { url: accountLink.url };

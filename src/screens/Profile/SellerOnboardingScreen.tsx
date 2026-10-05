@@ -33,7 +33,7 @@ export default function SellerOnboardingScreen() {
     setBusy(true);
     setError(null);
     try {
-      const url = await getSellerOnboardingLink("spotbnb://onboarding-complete", "spotbnb://onboarding-complete");
+      const url = await getSellerOnboardingLink();
       await Linking.openURL(url);
     } catch {
       setError("Unable to open payout setup. Please try again.");
