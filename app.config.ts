@@ -4,7 +4,7 @@ const ANDROID_PACKAGE = "com.spotbnb.app";
 const IOS_BUNDLE_ID = "com.spotbnb.app";
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
-const STRIPE_MERCHANT_ID = process.env.EXPO_PUBLIC_STRIPE_MERCHANT_ID ?? "merchant.com.spotbnb.app";
+const STRIPE_MERCHANT_ID = process.env.EXPO_PUBLIC_STRIPE_MERCHANT_ID;
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -18,9 +18,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: IOS_BUNDLE_ID,
-    config: {
-      googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    },
     infoPlist: {
       NSLocationWhenInUseUsageDescription:
         "SpotBnB uses your location to show nearby parking spots and to help buyers find your listing.",
@@ -56,7 +53,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "@stripe/stripe-react-native",
       {
-        merchantIdentifier: STRIPE_MERCHANT_ID,
+        ...(STRIPE_MERCHANT_ID ? { merchantIdentifier: STRIPE_MERCHANT_ID } : {}),
         enableGooglePay: true,
       },
     ],
@@ -79,7 +76,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   extra: {
     eas: {
-      projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? "",
+      projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? "2b8d0c4d-9bb1-4b5b-b66c-a4301ac428a9",
     },
   },
 });

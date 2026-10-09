@@ -17,6 +17,11 @@
         "buildType": "apk"
       }
     },
+    "testflight": {
+      "extends": "production",
+      "distribution": "store",
+      "environment": "preview"
+    },
     "production": {
       "autoIncrement": true,
       "android": {
@@ -25,6 +30,9 @@
     }
   },
   "submit": {
+    "testflight": {
+      "ios": {}
+    },
     "production": {
       "android": {
         "serviceAccountKeyPath": "./play-store-service-account.json",
