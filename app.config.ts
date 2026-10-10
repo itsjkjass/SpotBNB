@@ -19,6 +19,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: true,
     bundleIdentifier: IOS_BUNDLE_ID,
     infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
       NSLocationWhenInUseUsageDescription:
         "SpotBnB uses your location to show nearby parking spots and to help buyers find your listing.",
       NSCameraUsageDescription: "SpotBnB uses your camera to take photos of your parking spot listing.",
