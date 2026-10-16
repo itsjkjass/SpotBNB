@@ -8,10 +8,11 @@ const ts = require('typescript');
 // Execute the real handler with isolated external boundaries. These tests
 // establish event transitions, not Firestore concurrency or live Stripe delivery.
 function fixture(initialStatus = 'pending_payment') {
-  const booking = { status: initialStatus };
+  const booking = { status: initialStatus, totalPriceCents: 1000, currency: 'cad' };
   let event;
   let writes = 0;
   const dependencies = {
+    '../services/sellerEarnings': { reconcileChargeAdjustment: async () => {} },
     'firebase-functions/v2/https': { onRequest: (_, handler) => handler },
     'firebase-functions/v2': { logger: { error() {} } },
     '../admin': { db: {
@@ -41,7 +42,7 @@ function fixture(initialStatus = 'pending_payment') {
   return {
     booking, writes: () => writes,
     async deliver(type, signature = 'valid') {
-      event = { type, data: { object: { id: 'pi_test', metadata: { bookingId: 'booking' } } } };
+      event = { type, data: { object: { id: 'pi_test', amount: 1000, currency: 'cad', metadata: { bookingId: 'booking' } } } };
       let code;
       await exports.stripeWebhook({ headers: { 'stripe-signature': signature }, rawBody: '' }, {
         status(value) { code = value; return this; }, send() {},
@@ -117,4 +118,13 @@ test('event for a different intent cannot confirm this booking', async () => {
   await f.deliver('payment_intent.succeeded');
   assert.equal(f.booking.status, 'pending_payment');
   assert.equal(f.writes(), 0);
+});
+
+test('event with a different amount or currency cannot confirm this booking', async () => {
+  for (const change of [{ totalPriceCents: 9000 }, { currency: 'usd' }]) {
+    const f = fixture(); Object.assign(f.booking, change);
+    await f.deliver('payment_intent.succeeded');
+    assert.equal(f.booking.status, 'pending_payment');
+    assert.equal(f.writes(), 0);
+  }
 });

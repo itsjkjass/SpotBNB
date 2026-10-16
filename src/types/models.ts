@@ -65,6 +65,10 @@ export interface Booking {
   currency: "cad";
   status: BookingStatus;
   stripePaymentIntentId?: string;
+  paymentFlow?: "separate_v1";
+  cancellationRequestedAt?: number;
+  refundedCents?: number;
+  paymentDisputed?: boolean;
   createdAt: number;
 }
 

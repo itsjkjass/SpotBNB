@@ -16,7 +16,7 @@ export default function MyListingsScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const canPublish = profile?.stripeConnectOnboarded === true;
+  const payoutSetupSubmitted = profile?.stripeConnectOnboarded === true;
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -38,19 +38,12 @@ export default function MyListingsScreen({ navigation }: Props) {
   );
 
   const toggleActive = async (spot: ParkingSpot) => {
-    if (!spot.isActive && !canPublish) {
-      Alert.alert("Finish payment setup", "Your listing is saved. Complete seller payment setup before making it available for bookings.", [
-        { text: "Later", style: "cancel" },
-        { text: "Set up payments", onPress: () => navigation.navigate("SellerOnboarding") },
-      ]);
-      return;
-    }
     setBusyId(spot.id);
     try {
       await updateSpot(spot.id, { isActive: !spot.isActive });
       await load();
     } catch {
-      Alert.alert("Couldn't update listing", "Please try again. If payment setup has changed, refresh it in Profile.");
+      Alert.alert("Couldn't update listing", "Please try again.");
     } finally { setBusyId(null); }
   };
 
@@ -96,9 +89,9 @@ export default function MyListingsScreen({ navigation }: Props) {
             <Text style={styles.cardTitle}>Your seller setup</Text>
             <Text style={styles.step}>✓ Account created</Text>
             <Text style={styles.step}>{spots.length ? "✓ Listing saved" : "○ Add your first listing"}</Text>
-            <Text style={styles.step}>{canPublish ? "✓ Payment setup submitted" : "○ Set up payments to accept bookings"}</Text>
-            {!canPublish && <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate("SellerOnboarding")}>
-              <Text style={styles.setupLink}>Continue payment setup →</Text>
+            <Text style={styles.step}>{payoutSetupSubmitted ? "✓ Payout details submitted" : "○ Set up payouts before withdrawing earnings"}</Text>
+            {!payoutSetupSubmitted && <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate("SellerOnboarding")}>
+              <Text style={styles.setupLink}>Set up payouts →</Text>
             </TouchableOpacity>}
             {error && <>
               <Text accessibilityRole="alert" style={styles.error}>{error}</Text>

@@ -49,11 +49,8 @@ export const createBooking = onCall<CreateBookingRequest>(
 
     const sellerSnap = await db.collection("users").doc(spot.ownerId).get();
     const seller = sellerSnap.data();
-    if (!seller?.stripeConnectAccountId || !seller?.stripeConnectOnboarded) {
-      throw new HttpsError(
-        "failed-precondition",
-        "This seller hasn't finished setting up payouts yet."
-      );
+    if (!seller) {
+      throw new HttpsError("failed-precondition", "This seller's account is unavailable.");
     }
 
     if (typeof spot.pricePerHour !== "number" || !Number.isFinite(spot.pricePerHour) || spot.pricePerHour <= 0 ||
@@ -80,9 +77,10 @@ export const createBooking = onCall<CreateBookingRequest>(
     const paymentIntentRequest: Stripe.PaymentIntentCreateParams = {
       amount: totalPriceCents,
       currency: "cad",
-      automatic_payment_methods: { enabled: true },
-      application_fee_amount: platformFeeCents,
-      transfer_data: { destination: seller.stripeConnectAccountId },
+      // Charge the platform now. The seller's net earnings are transferred only
+      // after the booking ends and they finish Connect setup and request withdrawal.
+      payment_method_types: ["card"],
+      transfer_group: `booking_${bookingRef.id}`,
       metadata: { bookingId: bookingRef.id, spotId, buyerId: uid, sellerId: spot.ownerId },
     };
 
@@ -111,6 +109,7 @@ export const createBooking = onCall<CreateBookingRequest>(
         endTime,
         totalPriceCents,
         platformFeeCents,
+        paymentFlow: "separate_v1",
         currency: "cad",
         status: "pending_payment",
         createdAt,

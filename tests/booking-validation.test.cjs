@@ -13,7 +13,7 @@ function fixture(prices = {}) {
       if (name === 'bookings') return { ...query, doc: () => ({ id: 'booking' }) };
       return { doc: () => ({ get: async () => ({ exists: true, data: () => name === 'spots'
         ? { ownerId: 'seller', title: 'Parking', address: 'Test', isActive: true, pricePerHour: 5, ...prices }
-        : { stripeConnectAccountId: 'acct_seller', stripeConnectOnboarded: true } }) }) };
+        : { stripeConnectOnboarded: false } }) }) };
     },
     runTransaction: async callback => callback({ get: async () => ({ docs: [] }), set: (_, value) => writes.push(value) }),
   };
@@ -76,6 +76,10 @@ test('valid hourly and rounded daily bookings preserve pricing', async () => {
   const hourly = fixture();
   await hourly.run(hourly.valid);
   assert.equal(hourly.writes[0].totalPriceCents, 500);
+  assert.equal(hourly.writes[0].paymentFlow, 'separate_v1');
+  assert.equal(hourly.writes[0].paymentIntentRequest.transfer_data, undefined);
+  assert.equal(hourly.writes[0].paymentIntentRequest.application_fee_amount, undefined);
+  assert.equal(hourly.writes[0].paymentIntentRequest.transfer_group, 'booking_booking');
   const daily = fixture({ pricePerDay: 30 });
   await daily.run({ ...daily.valid, endTime: daily.valid.startTime + 25 * 3600000 });
   assert.equal(daily.writes[0].totalPriceCents, 6000);

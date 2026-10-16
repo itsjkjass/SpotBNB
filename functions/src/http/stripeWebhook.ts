@@ -4,6 +4,7 @@ import { db } from "../admin";
 import { getStripeClient } from "../stripeClient";
 import { stripeSecretKey, stripeWebhookSecret } from "../config";
 import type Stripe from "stripe";
+import { reconcileChargeAdjustment } from "../services/sellerEarnings";
 
 export const stripeWebhook = onRequest(
   { secrets: [stripeSecretKey, stripeWebhookSecret] },
@@ -24,25 +25,37 @@ export const stripeWebhook = onRequest(
       return;
     }
 
-    async function transitionBooking(bookingId: string, nextStatus: "confirmed" | "cancelled", intentId: string) {
+    async function transitionBooking(bookingId: string, nextStatus: "confirmed" | "cancelled", intent: Stripe.PaymentIntent) {
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(bookingId)) return;
       const bookingRef = db.collection("bookings").doc(bookingId);
       await db.runTransaction(async (transaction) => {
         const bookingSnap = await transaction.get(bookingRef);
         if (!bookingSnap.exists) return;
         const booking = bookingSnap.data()!;
         if (booking.status !== "pending_payment") return;
-        if (booking.stripePaymentIntentId && booking.stripePaymentIntentId !== intentId) return;
-        transaction.update(bookingRef, { status: nextStatus, stripePaymentIntentId: intentId });
+        if (booking.stripePaymentIntentId && booking.stripePaymentIntentId !== intent.id) return;
+        if (booking.totalPriceCents !== intent.amount || booking.currency !== intent.currency) return;
+        transaction.update(bookingRef, { status: nextStatus, stripePaymentIntentId: intent.id });
       });
     }
 
     try {
       switch (event.type) {
+        case "charge.refunded":
+          await reconcileChargeAdjustment((event.data.object as Stripe.Charge).id);
+          break;
+        case "charge.dispute.created":
+        case "charge.dispute.closed": {
+          const dispute = event.data.object as Stripe.Dispute;
+          const chargeId = typeof dispute.charge === "string" ? dispute.charge : dispute.charge.id;
+          await reconcileChargeAdjustment(chargeId);
+          break;
+        }
         case "payment_intent.succeeded": {
           const intent = event.data.object as Stripe.PaymentIntent;
           const bookingId = intent.metadata?.bookingId;
           if (bookingId) {
-            await transitionBooking(bookingId, "confirmed", intent.id);
+            await transitionBooking(bookingId, "confirmed", intent);
           }
           break;
         }
@@ -54,7 +67,7 @@ export const stripeWebhook = onRequest(
           const intent = event.data.object as Stripe.PaymentIntent;
           const bookingId = intent.metadata?.bookingId;
           if (bookingId) {
-            await transitionBooking(bookingId, "cancelled", intent.id);
+            await transitionBooking(bookingId, "cancelled", intent);
           }
           break;
         }

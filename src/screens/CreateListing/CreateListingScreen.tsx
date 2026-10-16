@@ -25,8 +25,7 @@ const SPOT_TYPES: SpotType[] = ["driveway", "garage", "lot", "street", "other"];
 const VEHICLE_SIZES: VehicleSize[] = ["compact", "standard", "suv_truck"];
 
 export default function CreateListingScreen({ navigation }: Props) {
-  const { user, profile } = useAuth();
-  const canPublish = profile?.stripeConnectOnboarded === true;
+  const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
@@ -105,7 +104,7 @@ export default function CreateListingScreen({ navigation }: Props) {
         vehicleSizes,
         amenities: [],
         availability: { type: "always" },
-      }, canPublish);
+      }, true);
 
       navigation.goBack();
     } catch (e: unknown) {
@@ -118,7 +117,7 @@ export default function CreateListingScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {!canPublish && <Text style={styles.draftNotice}>Create your listing now. It will be saved privately until you finish payment setup and turn it on in My Listings.</Text>}
+      <Text style={styles.draftNotice}>Publish your space to receive bookings. Set up payouts later, before withdrawing your earnings. You can hide your listing at any time in My Listings.</Text>
       <Text style={styles.label}>Title</Text>
       <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Driveway near BMO Field" />
 
@@ -193,7 +192,7 @@ export default function CreateListingScreen({ navigation }: Props) {
       {error && <Text style={styles.error}>{error}</Text>}
 
       <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={submitting}>
-        {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{canPublish ? "Publish Listing" : "Save Listing"}</Text>}
+        {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Publish Listing</Text>}
       </TouchableOpacity>
     </ScrollView>
   );

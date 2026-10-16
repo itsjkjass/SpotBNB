@@ -82,7 +82,8 @@ test('initial setup saves a recoverable payment request before contacting Stripe
   const result = await f.create();
   assert.equal(result.bookingId, 'booking');
   assert.equal(f.booking().stripePaymentIntentId, 'pi_recovered');
-  assert.equal(f.booking().paymentIntentRequest.transfer_data.destination, 'acct_seller');
+  assert.equal(f.booking().paymentIntentRequest.transfer_data, undefined);
+  assert.equal(f.booking().paymentIntentRequest.transfer_group, 'booking_booking');
   assert.equal(typeof f.booking().paymentReconcileAt, 'number');
   assert.equal(f.booking().paymentExpiresAt - f.booking().createdAt, 900000);
 });

@@ -31,16 +31,12 @@ service cloud.firestore {
     }
 
     match /spots/{spotId} {
-      function canPublish() {
-        return request.resource.data.isActive == false
-          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.stripeConnectOnboarded == true;
-      }
       allow read: if resource.data.isActive == true || isOwner(resource.data.ownerId);
       allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.isActive is bool && canPublish();
+        && request.resource.data.isActive is bool;
       allow update: if isOwner(resource.data.ownerId)
         && request.resource.data.ownerId == resource.data.ownerId
-        && request.resource.data.isActive is bool && canPublish();
+        && request.resource.data.isActive is bool;
       allow delete: if isOwner(resource.data.ownerId);
     }
 
@@ -66,6 +62,12 @@ service cloud.firestore {
 
     match /messageReports/{reportId} {
       allow read, write: if false;
+    }
+
+    match /sellerTransfers/{bookingId} {
+      allow get: if isOwner(get(/databases/$(database)/documents/bookings/$(bookingId)).data.sellerId);
+      allow list: if isOwner(resource.data.sellerId);
+      allow write: if false;
     }
 
     match /documentChecks/{userId}/roles/{role} {

@@ -10,7 +10,12 @@ export const completeBookings = onSchedule("every 60 minutes", async () => {
     .limit(500)
     .get();
 
-  const batch = db.batch();
-  snapshot.docs.forEach((doc) => batch.update(doc.ref, { status: "completed" }));
-  await batch.commit();
+  for (let offset = 0; offset < snapshot.docs.length; offset += 10) {
+    await Promise.all(snapshot.docs.slice(offset, offset + 10).map(document => db.runTransaction(async transaction => {
+      const booking = (await transaction.get(document.ref)).data();
+      if (booking?.status === "confirmed" && !booking.cancellationRequestedAt) {
+        transaction.update(document.ref, { status: "completed" });
+      }
+    })));
+  }
 });

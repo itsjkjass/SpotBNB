@@ -126,7 +126,7 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
       </View>
       <View style={styles.row}>
         <Text style={styles.label}>Status</Text>
-        <Text style={styles.value}>{booking.status.replace("_", " ")}</Text>
+        <Text style={styles.value}>{booking.cancellationRequestedAt && booking.status !== "cancelled" ? "Cancellation processing" : booking.status.replace("_", " ")}</Text>
       </View>
 
       {canCancel && (

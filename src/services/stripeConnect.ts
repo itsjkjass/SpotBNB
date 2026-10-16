@@ -14,8 +14,8 @@ export async function getSellerOnboardingLink(): Promise<string> {
   return result.data.url;
 }
 
-export async function getSellerConnectStatus(): Promise<{ onboarded: boolean; payoutsEnabled: boolean }> {
-  const fn = httpsCallable<void, { onboarded: boolean; payoutsEnabled: boolean }>(
+export async function getSellerConnectStatus(): Promise<{ onboarded: boolean; payoutsEnabled: boolean; transfersEnabled: boolean }> {
+  const fn = httpsCallable<void, { onboarded: boolean; payoutsEnabled: boolean; transfersEnabled: boolean }>(
     functions,
     "getConnectAccountStatus"
   );

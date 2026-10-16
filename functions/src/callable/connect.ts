@@ -32,9 +32,14 @@ export const createConnectOnboardingLink = onCall(
           transfers: { requested: true },
         },
         business_type: "individual",
+      }, { idempotencyKey: `seller-connect-${uid}` });
+      accountId = await db.runTransaction(async transaction => {
+        const current = (await transaction.get(userRef)).data();
+        if (!current) throw new HttpsError("not-found", "User profile not found.");
+        if (current.stripeConnectAccountId) return current.stripeConnectAccountId as string;
+        transaction.update(userRef, { stripeConnectAccountId: account.id, stripeConnectOnboarded: false });
+        return account.id;
       });
-      accountId = account.id;
-      await userRef.update({ stripeConnectAccountId: accountId, stripeConnectOnboarded: false });
     }
 
     const accountLink = await stripe.accountLinks.create({
@@ -58,7 +63,7 @@ export const getConnectAccountStatus = onCall(
     const userSnap = await db.collection("users").doc(uid).get();
     const user = userSnap.data();
     if (!user?.stripeConnectAccountId) {
-      return { onboarded: false, payoutsEnabled: false };
+      return { onboarded: false, payoutsEnabled: false, transfersEnabled: false };
     }
 
     const stripe = getStripeClient();
@@ -70,6 +75,6 @@ export const getConnectAccountStatus = onCall(
       await db.collection("users").doc(uid).update({ stripeConnectOnboarded: onboarded });
     }
 
-    return { onboarded, payoutsEnabled };
+    return { onboarded, payoutsEnabled, transfersEnabled: account.capabilities?.transfers === "active" };
   }
 );

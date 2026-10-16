@@ -47,7 +47,7 @@ export default function SellerOnboardingScreen() {
       <Text style={styles.title}>Get paid for your parking spot</Text>
       <Text style={styles.description}>
         SpotBnB uses Stripe to pay sellers directly and securely. You&apos;ll need to complete a short
-        onboarding form (identity + bank account) to accept paid bookings. You can create and save your listings before completing this step.
+        onboarding form (identity + bank account) before withdrawing earnings. You can publish listings and receive bookings before completing this step.
       </Text>
 
       {error ? <Text accessibilityRole="alert" style={{ color: colors.danger, marginTop: spacing.md }}>{error}</Text> : null}

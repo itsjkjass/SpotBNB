@@ -1,7 +1,8 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { db } from "../admin";
 import { getStripeClient } from "../stripeClient";
-import { stripeSecretKey } from "../config";
+import { stripeSecretKey, PAYMENT_RECHECK_MS } from "../config";
+import { finishBookingCancellation } from "../services/bookingCancellation";
 
 interface CancelBookingRequest {
   bookingId: string;
@@ -15,7 +16,10 @@ export const cancelBooking = onCall<CancelBookingRequest>(
       throw new HttpsError("unauthenticated", "You must be signed in.");
     }
 
-    const { bookingId } = request.data;
+    const bookingId = request.data?.bookingId;
+    if (typeof bookingId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(bookingId)) {
+      throw new HttpsError("invalid-argument", "Invalid booking ID.");
+    }
     const bookingRef = db.collection("bookings").doc(bookingId);
     const bookingSnap = await bookingRef.get();
     if (!bookingSnap.exists) {
@@ -28,7 +32,7 @@ export const cancelBooking = onCall<CancelBookingRequest>(
     if (booking.status === "cancelled" || booking.status === "completed") {
       throw new HttpsError("failed-precondition", `Booking is already ${booking.status}.`);
     }
-    if (booking.startTime <= Date.now()) {
+    if (booking.startTime <= Date.now() && !booking.cancellationRequestedAt) {
       throw new HttpsError("failed-precondition", "This booking has already started.");
     }
 
@@ -43,6 +47,23 @@ export const cancelBooking = onCall<CancelBookingRequest>(
     }
 
     const stripe = getStripeClient();
+    if (booking.paymentFlow === "separate_v1") {
+      // A cancellation started before parking begins may finish after it ends.
+      // Persist the request first so withdrawals cannot race the refund.
+      await db.runTransaction(async transaction => {
+        const current = (await transaction.get(bookingRef)).data();
+        if (!current || current.status === "cancelled" || current.status === "completed" ||
+            (current.startTime <= Date.now() && !current.cancellationRequestedAt)) {
+          throw new HttpsError("failed-precondition", "This booking can no longer be cancelled.");
+        }
+        transaction.update(bookingRef, {
+          cancellationRequestedAt: current.cancellationRequestedAt || Date.now(),
+          cancellationReconcileAt: Date.now() + PAYMENT_RECHECK_MS,
+        });
+      });
+      await finishBookingCancellation(bookingRef);
+      return { ok: true };
+    }
     const intent = await stripe.paymentIntents.retrieve(booking.stripePaymentIntentId);
     if (intent.status === "succeeded") {
       await stripe.refunds.create(

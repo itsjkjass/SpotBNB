@@ -21,6 +21,9 @@ export default function ProfileScreen({ navigation }: Props) {
         <Text style={styles.rowLabel}>Document checks</Text><Text style={styles.rowValue}>View →</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity style={styles.row} onPress={() => navigation.navigate("Earnings")}>
+        <Text style={styles.rowLabel}>Earnings</Text><Text style={styles.rowValue}>View →</Text>
+      </TouchableOpacity>
       <TouchableOpacity style={styles.row} onPress={() => navigation.navigate("SellerOnboarding")}>
         <Text style={styles.rowLabel}>Seller payouts</Text>
         <Text style={styles.rowValue}>

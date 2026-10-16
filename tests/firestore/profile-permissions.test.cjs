@@ -74,7 +74,7 @@ test('booking messages and conversations are private, server-written records', a
   }
 });
 
-test('sellers can save private listings before onboarding, but cannot publish them', async () => {
+test('sellers can save and publish before payout setup, while private drafts remain private', async () => {
   await setDoc(ownRef(), profile());
   const db = env.authenticatedContext('seller').firestore();
   const spot = doc(db, 'spots/draft');
@@ -82,12 +82,35 @@ test('sellers can save private listings before onboarding, but cannot publish th
   await assertSucceeds(updateDoc(spot, { title: 'Updated draft' }));
   await assertSucceeds(getDoc(spot));
   await assertSucceeds(getDocs(query(collection(db, 'spots'), where('ownerId', '==', 'seller'))));
-  await assertFails(updateDoc(spot, { isActive: true }));
+  await assertSucceeds(updateDoc(spot, { isActive: true }));
+  await assertSucceeds(updateDoc(spot, { isActive: false }));
   await assertFails(updateDoc(spot, { ownerId: 'other' }));
-  await assertFails(setDoc(doc(db, 'spots/public'), { ownerId: 'seller', isActive: true }));
+  await assertSucceeds(setDoc(doc(db, 'spots/public'), { ownerId: 'seller', isActive: true }));
   for (const context of [env.unauthenticatedContext(), env.authenticatedContext('other')]) {
     await assertFails(getDoc(doc(context.firestore(), 'spots/draft')));
     await assertFails(updateDoc(doc(context.firestore(), 'spots/draft'), { title: 'Stolen' }));
+  }
+});
+
+test('withdrawal records are seller-private and cannot be forged by app clients', async () => {
+  await env.withSecurityRulesDisabled(async context => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'bookings/earned'), { sellerId: 'seller', buyerId: 'buyer' });
+    await setDoc(doc(db, 'bookings/unused'), { sellerId: 'seller', buyerId: 'buyer' });
+    await setDoc(doc(db, 'sellerTransfers/earned'), { sellerId: 'seller', status: 'transferred', amountCents: 880 });
+  });
+  const seller = env.authenticatedContext('seller').firestore();
+  await assertSucceeds(getDoc(doc(seller, 'sellerTransfers/earned')));
+  await assertSucceeds(getDoc(doc(seller, 'sellerTransfers/unused')));
+  for (const context of [env.authenticatedContext('seller'), env.authenticatedContext('buyer'), env.authenticatedContext('outsider'), env.unauthenticatedContext()]) {
+    const db = context.firestore();
+    await assertFails(setDoc(doc(db, 'sellerTransfers/unused'), { sellerId: 'seller', status: 'transferred' }));
+    await assertFails(updateDoc(doc(db, 'sellerTransfers/earned'), { amountCents: 99000 }));
+    await assertFails(deleteDoc(doc(db, 'sellerTransfers/earned')));
+  }
+  for (const context of [env.authenticatedContext('buyer'), env.authenticatedContext('outsider'), env.unauthenticatedContext()]) {
+    await assertFails(getDoc(doc(context.firestore(), 'sellerTransfers/earned')));
+    await assertFails(getDoc(doc(context.firestore(), 'sellerTransfers/unused')));
   }
 });
 

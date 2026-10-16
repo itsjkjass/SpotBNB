@@ -19,6 +19,7 @@ function fixture({ intentStatus = 'succeeded', failUpdateOnce = false, refundErr
     constructor(code, message) { super(message); this.code = code; }
   }
   const dependencies = {
+    '../services/bookingCancellation': { finishBookingCancellation: () => { throw new Error('Legacy booking should not use the new flow'); } },
     'firebase-functions/v2/https': { onCall: (_, handler) => handler, HttpsError },
     '../config': { stripeSecretKey: {} },
     '../admin': { db: { collection: () => ({ doc: () => ({

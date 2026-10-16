@@ -87,3 +87,36 @@ test('Stripe refresh failure offers recovery without leaking API errors', async 
   assert.match(response.body, /Start onboarding again/);
   assert.doesNotMatch(response.body, /test-only-signing-secret/);
 });
+
+test('racing onboarding requests reuse the account and cannot replace an attached payout destination', async () => {
+  const user = { email: 'seller@example.com' };
+  const accountCalls = []; const linkAccounts = [];
+  const userRef = { get: async () => ({ data: () => ({ ...user }) }) };
+  let queue = Promise.resolve();
+  const { createConnectOnboardingLink } = loadBackend('callable/connect.ts', {
+    'firebase-functions/v2/https': { onCall: (_, handler) => handler, HttpsError: Error },
+    '../config': { stripeSecretKey: { value: () => 'fixture-only' } },
+    '../connectOnboarding': { createRefreshToken: () => 'fixture-token', onboardingCallbacks: () => ({}) },
+    '../admin': { app: { options: { projectId: 'fixture-project' } }, db: {
+      collection: () => ({ doc: () => userRef }),
+      runTransaction: fn => {
+        const run = queue.then(() => fn({ get: ref => ref.get(), update: (_, changes) => Object.assign(user, changes) }));
+        queue = run.catch(() => {}); return run;
+      },
+    } },
+    '../stripeClient': { getStripeClient: () => ({
+      accounts: { create: async (params, options) => { accountCalls.push({ params, options }); return { id: 'acct_first' }; } },
+      accountLinks: { create: async params => { linkAccounts.push(params.account); return { url: 'https://connect.stripe.com/fixture' }; } },
+    }) },
+  });
+  const request = { auth: { uid: 'seller' } };
+  await Promise.all([createConnectOnboardingLink(request), createConnectOnboardingLink(request)]);
+  assert.equal(user.stripeConnectAccountId, 'acct_first');
+  assert.ok(accountCalls.every(call => call.options.idempotencyKey === 'seller-connect-seller'));
+  assert.deepEqual(linkAccounts, ['acct_first', 'acct_first']);
+  const callsBefore = accountCalls.length;
+  user.stripeConnectAccountId = 'acct_existing';
+  await createConnectOnboardingLink(request);
+  assert.equal(accountCalls.length, callsBefore);
+  assert.equal(linkAccounts.at(-1), 'acct_existing');
+});
