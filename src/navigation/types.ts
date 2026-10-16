@@ -1,3 +1,8 @@
+export type RootStackParamList = {
+  Main: undefined;
+  Auth: undefined;
+};
+
 export type SearchStackParamList = {
   SearchMap: undefined;
   SpotDetail: { spotId: string };
@@ -7,6 +12,7 @@ export type SearchStackParamList = {
 export type MyListingsStackParamList = {
   MyListings: undefined;
   CreateListing: { spotId?: string } | undefined;
+  SellerOnboarding: undefined;
 };
 
 export type BookingsStackParamList = {

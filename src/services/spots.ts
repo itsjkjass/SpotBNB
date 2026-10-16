@@ -19,14 +19,15 @@ const spotsCollection = collection(db, "spots");
 
 export async function createSpot(
   ownerId: string,
-  data: Omit<ParkingSpot, "id" | "ownerId" | "isActive" | "averageRating" | "reviewCount" | "createdAt" | "updatedAt">
+  data: Omit<ParkingSpot, "id" | "ownerId" | "isActive" | "averageRating" | "reviewCount" | "createdAt" | "updatedAt">,
+  isActive = false
 ) {
   const { pricePerDay, ...listing } = data;
   const docRef = await addDoc(spotsCollection, {
     ...listing,
     ...(pricePerDay === undefined ? {} : { pricePerDay }),
     ownerId,
-    isActive: true,
+    isActive,
     averageRating: 0,
     reviewCount: 0,
     createdAt: serverTimestamp(),

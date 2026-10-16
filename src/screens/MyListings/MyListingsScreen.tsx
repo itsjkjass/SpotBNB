@@ -14,12 +14,18 @@ export default function MyListingsScreen({ navigation }: Props) {
   const { user, profile } = useAuth();
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const canPublish = profile?.stripeConnectOnboarded === true;
 
   const load = useCallback(async () => {
     if (!user) return;
     setLoading(true);
+    setError(null);
     try {
       setSpots(await getSpotsByOwner(user.uid));
+    } catch {
+      setError("Couldn't load your listings. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -32,8 +38,20 @@ export default function MyListingsScreen({ navigation }: Props) {
   );
 
   const toggleActive = async (spot: ParkingSpot) => {
-    await updateSpot(spot.id, { isActive: !spot.isActive });
-    load();
+    if (!spot.isActive && !canPublish) {
+      Alert.alert("Finish payment setup", "Your listing is saved. Complete seller payment setup before making it available for bookings.", [
+        { text: "Later", style: "cancel" },
+        { text: "Set up payments", onPress: () => navigation.navigate("SellerOnboarding") },
+      ]);
+      return;
+    }
+    setBusyId(spot.id);
+    try {
+      await updateSpot(spot.id, { isActive: !spot.isActive });
+      await load();
+    } catch {
+      Alert.alert("Couldn't update listing", "Please try again. If payment setup has changed, refresh it in Profile.");
+    } finally { setBusyId(null); }
   };
 
   const confirmDelete = (spot: ParkingSpot) => {
@@ -46,23 +64,18 @@ export default function MyListingsScreen({ navigation }: Props) {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            await deleteSpot(spot.id);
-            load();
+            setBusyId(spot.id);
+            try {
+              await deleteSpot(spot.id);
+              await load();
+            } catch {
+              Alert.alert("Couldn't delete listing", "Please try again.");
+            } finally { setBusyId(null); }
           },
         },
       ]
     );
   };
-
-  if (!profile?.stripeConnectOnboarded) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.notice}>
-          Set up payouts in your Profile tab before you can list a parking spot.
-        </Text>
-      </View>
-    );
-  }
 
   if (loading) {
     return (
@@ -78,9 +91,24 @@ export default function MyListingsScreen({ navigation }: Props) {
         data={spots}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
+        ListHeaderComponent={
+          <View style={styles.setup}>
+            <Text style={styles.cardTitle}>Your seller setup</Text>
+            <Text style={styles.step}>✓ Account created</Text>
+            <Text style={styles.step}>{spots.length ? "✓ Listing saved" : "○ Add your first listing"}</Text>
+            <Text style={styles.step}>{canPublish ? "✓ Payment setup submitted" : "○ Set up payments to accept bookings"}</Text>
+            {!canPublish && <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate("SellerOnboarding")}>
+              <Text style={styles.setupLink}>Continue payment setup →</Text>
+            </TouchableOpacity>}
+            {error && <>
+              <Text accessibilityRole="alert" style={styles.error}>{error}</Text>
+              <TouchableOpacity accessibilityRole="button" onPress={load}><Text style={styles.setupLink}>Try again</Text></TouchableOpacity>
+            </>}
+          </View>
+        }
         ListEmptyComponent={
           <View style={styles.center}>
-            <Text style={styles.notice}>You haven&apos;t listed any parking spots yet.</Text>
+            {!error && <Text style={styles.notice}>Add your parking space now. You can finish seller setup afterward.</Text>}
           </View>
         }
         renderItem={({ item }) => (
@@ -89,10 +117,11 @@ export default function MyListingsScreen({ navigation }: Props) {
               <Text style={styles.cardTitle}>{item.title}</Text>
               <Text style={styles.cardAddress}>{item.address}</Text>
               <Text style={styles.cardPrice}>${item.pricePerHour.toFixed(2)} CAD/hr</Text>
+              <Text style={styles.step}>{item.isActive ? "Visible in search" : "Hidden from search"}</Text>
             </View>
             <View style={styles.cardActions}>
-              <Switch value={item.isActive} onValueChange={() => toggleActive(item)} />
-              <TouchableOpacity onPress={() => confirmDelete(item)}>
+              <Switch accessibilityLabel={`Show ${item.title} in search`} disabled={busyId !== null} value={item.isActive} onValueChange={() => toggleActive(item)} />
+              <TouchableOpacity disabled={busyId !== null} onPress={() => confirmDelete(item)}>
                 <Text style={styles.deleteText}>Delete</Text>
               </TouchableOpacity>
             </View>
@@ -110,7 +139,11 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.lg },
   notice: { color: colors.textMuted, textAlign: "center" },
-  list: { padding: spacing.lg },
+  list: { padding: spacing.lg, paddingBottom: 120 },
+  setup: { paddingBottom: spacing.lg },
+  step: { color: colors.textMuted, marginTop: spacing.sm },
+  setupLink: { color: colors.primary, fontWeight: "600", paddingVertical: spacing.md },
+  error: { color: colors.danger, marginTop: spacing.sm },
   card: {
     flexDirection: "row",
     backgroundColor: colors.surface,

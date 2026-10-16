@@ -23,7 +23,7 @@ function fixture() {
   const source = fs.readFileSync(path.resolve(__dirname, '../src/services/spots.ts'), 'utf8');
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } });
   vm.runInNewContext(outputText, { exports, require: name => dependencies[name] });
-  return { writes, create: data => exports.createSpot('owner', data) };
+  return { writes, create: (data, active) => exports.createSpot('owner', data, active) };
 }
 
 test('blank optional daily price is omitted and hourly listing can be created', async () => {
@@ -33,8 +33,14 @@ test('blank optional daily price is omitted and hourly listing can be created', 
   assert.equal(Object.hasOwn(f.writes[0], 'pricePerDay'), false);
   assert.equal(f.writes[0].pricePerHour, 5);
   assert.equal(f.writes[0].ownerId, 'owner');
-  assert.equal(f.writes[0].isActive, true);
+  assert.equal(f.writes[0].isActive, false);
   assert.equal(Object.hasOwn(input, 'pricePerDay'), true);
+});
+
+test('a seller ready to publish can explicitly make the new listing active', async () => {
+  const f = fixture();
+  await f.create({ title: 'Garage', pricePerHour: 5 }, true);
+  assert.equal(f.writes[0].isActive, true);
 });
 
 test('supplied daily price and listing fields are preserved', async () => {

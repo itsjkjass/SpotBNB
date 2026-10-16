@@ -7,8 +7,19 @@ import BookingsStack from "./BookingsStack";
 import ProfileStack from "./ProfileStack";
 import type { MainTabsParamList } from "./types";
 import { colors } from "../constants/theme";
+import RequireAccount from "../components/RequireAccount";
 
 const Tab = createBottomTabNavigator<MainTabsParamList>();
+
+function AccountListings() {
+  return <RequireAccount message="Create an account to list your parking space. You can set up payouts later."><MyListingsStack /></RequireAccount>;
+}
+function AccountBookings() {
+  return <RequireAccount message="Log in to see your reservations and manage bookings."><BookingsStack /></RequireAccount>;
+}
+function AccountProfile() {
+  return <RequireAccount message="Log in to manage your profile and seller setup."><ProfileStack /></RequireAccount>;
+}
 
 const TAB_ICONS: Record<keyof MainTabsParamList, string> = {
   SearchTab: "📍",
@@ -28,9 +39,9 @@ export default function MainTabs() {
       })}
     >
       <Tab.Screen name="SearchTab" component={SearchStack} options={{ title: "Search" }} />
-      <Tab.Screen name="MyListingsTab" component={MyListingsStack} options={{ title: "My Listings" }} />
-      <Tab.Screen name="BookingsTab" component={BookingsStack} options={{ title: "Bookings" }} />
-      <Tab.Screen name="ProfileTab" component={ProfileStack} options={{ title: "Profile" }} />
+      <Tab.Screen name="MyListingsTab" component={AccountListings} options={{ title: "My Listings" }} />
+      <Tab.Screen name="BookingsTab" component={AccountBookings} options={{ title: "Bookings" }} />
+      <Tab.Screen name="ProfileTab" component={AccountProfile} options={{ title: "Profile" }} />
     </Tab.Navigator>
   );
 }

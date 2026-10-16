@@ -21,6 +21,7 @@ const DEFAULT_REGION: Region = {
 export default function SearchScreen({ navigation }: Props) {
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [region, setRegion] = useState<Region>(DEFAULT_REGION);
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null);
 
@@ -48,9 +49,13 @@ export default function SearchScreen({ navigation }: Props) {
 
   const loadSpots = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const activeSpots = await getActiveSpots();
       setSpots(activeSpots);
+      setSelectedSpot(null);
+    } catch {
+      setError("Couldn't load parking spots. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -94,9 +99,10 @@ export default function SearchScreen({ navigation }: Props) {
         </TouchableOpacity>
       )}
 
-      {spots.length === 0 && (
+      {(error || spots.length === 0) && (
         <View style={styles.emptyBanner}>
-          <Text style={styles.emptyText}>No parking spots listed yet nearby.</Text>
+          <Text style={styles.emptyText}>{error ?? "No parking spots listed yet nearby."}</Text>
+          {error && <TouchableOpacity accessibilityRole="button" onPress={loadSpots}><Text style={styles.cardPrice}>Try again</Text></TouchableOpacity>}
         </View>
       )}
     </View>

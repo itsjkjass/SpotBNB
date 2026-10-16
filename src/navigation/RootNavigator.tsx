@@ -1,27 +1,29 @@
 import React from "react";
-import { View, ActivityIndicator } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "./types";
 import { useAuth } from "../hooks/useAuth";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 import AuthStack from "./AuthStack";
 import MainTabs from "./MainTabs";
 import { colors } from "../constants/theme";
 
-function AuthedApp() {
+const Stack = createNativeStackNavigator<RootStackParamList, "Root">();
+
+function AppTabs() {
   usePushNotifications();
   return <MainTabs />;
 }
 
 export default function RootNavigator() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
 
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  return <NavigationContainer>{user ? <AuthedApp /> : <AuthStack />}</NavigationContainer>;
+  return (
+    <NavigationContainer>
+      <Stack.Navigator id="Root" screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Main" component={AppTabs} />
+        {!user && <Stack.Screen name="Auth" component={AuthStack} options={{ presentation: "modal", headerShown: true, title: "Your account", headerTintColor: colors.primary }} />}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
 }

@@ -26,9 +26,17 @@ service cloud.firestore {
     }
 
     match /spots/{spotId} {
-      allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      function canPublish() {
+        return request.resource.data.isActive == false
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.stripeConnectOnboarded == true;
+      }
+      allow read: if resource.data.isActive == true || isOwner(resource.data.ownerId);
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.isActive is bool && canPublish();
+      allow update: if isOwner(resource.data.ownerId)
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.isActive is bool && canPublish();
+      allow delete: if isOwner(resource.data.ownerId);
     }
 
     // Bookings and payment state are only ever written by Cloud Functions,

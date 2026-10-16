@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
-const { doc, setDoc, updateDoc, getDoc, deleteDoc, deleteField, serverTimestamp } = require('firebase/firestore');
+const { doc, setDoc, updateDoc, getDoc, getDocs, query, where, collection, deleteDoc, deleteField, serverTimestamp } = require('firebase/firestore');
 
 let env;
 before(async () => {
@@ -17,6 +17,41 @@ after(async () => { if (env) await env.cleanup(); });
 const profile = () => ({ uid: 'seller', email: 'seller@example.com', displayName: 'Seller',
   roles: ['buyer'], stripeConnectOnboarded: false, createdAt: serverTimestamp() });
 const ownRef = () => doc(env.authenticatedContext('seller').firestore(), 'users/seller');
+
+test('sellers can save private listings before onboarding, but cannot publish them', async () => {
+  await setDoc(ownRef(), profile());
+  const db = env.authenticatedContext('seller').firestore();
+  const spot = doc(db, 'spots/draft');
+  await assertSucceeds(setDoc(spot, { ownerId: 'seller', isActive: false, title: 'Draft' }));
+  await assertSucceeds(updateDoc(spot, { title: 'Updated draft' }));
+  await assertSucceeds(getDoc(spot));
+  await assertSucceeds(getDocs(query(collection(db, 'spots'), where('ownerId', '==', 'seller'))));
+  await assertFails(updateDoc(spot, { isActive: true }));
+  await assertFails(updateDoc(spot, { ownerId: 'other' }));
+  await assertFails(setDoc(doc(db, 'spots/public'), { ownerId: 'seller', isActive: true }));
+  for (const context of [env.unauthenticatedContext(), env.authenticatedContext('other')]) {
+    await assertFails(getDoc(doc(context.firestore(), 'spots/draft')));
+    await assertFails(updateDoc(doc(context.firestore(), 'spots/draft'), { title: 'Stolen' }));
+  }
+});
+
+test('guests can search active listings while private listings remain owner-only', async () => {
+  await env.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), 'users/seller'), { ...profile(), stripeConnectOnboarded: true });
+  });
+  const seller = env.authenticatedContext('seller').firestore();
+  const guest = env.unauthenticatedContext().firestore();
+  await assertSucceeds(setDoc(doc(seller, 'spots/public'), { ownerId: 'seller', isActive: true }));
+  await setDoc(doc(seller, 'spots/private'), { ownerId: 'seller', isActive: false });
+  const results = await assertSucceeds(getDocs(query(collection(guest, 'spots'), where('isActive', '==', true))));
+  assert.deepEqual(results.docs.map(d => d.id), ['public']);
+  await assertFails(getDocs(collection(guest, 'spots')));
+  await assertSucceeds(getDoc(doc(guest, 'spots/public')));
+  await assertFails(setDoc(doc(guest, 'spots/guest'), { ownerId: 'guest', isActive: false }));
+  await assertSucceeds(updateDoc(doc(seller, 'spots/public'), { isActive: false }));
+  await assertFails(getDoc(doc(guest, 'spots/public')));
+  await assertSucceeds(deleteDoc(doc(seller, 'spots/private')));
+});
 
 test('normal signup and profile edits remain allowed', async () => {
   await assertSucceeds(setDoc(ownRef(), profile()));

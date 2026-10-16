@@ -22,14 +22,21 @@ export default function SpotDetailScreen({ route, navigation }: Props) {
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let active = true;
     (async () => {
-      const [spotData, reviewData] = await Promise.all([getSpot(spotId), getReviewsForSpot(spotId)]);
-      setSpot(spotData);
-      setReviews(reviewData);
-      setLoading(false);
+      setLoading(true);
+      setError(null);
+      try {
+        const [spotData, reviewData] = await Promise.all([getSpot(spotId), getReviewsForSpot(spotId)]);
+        if (active) { setSpot(spotData); setReviews(reviewData); }
+      } catch {
+        if (active) { setSpot(null); setError("This listing may no longer be available. Return to Search and try again."); }
+      } finally { if (active) setLoading(false); }
     })();
+    return () => { active = false; };
   }, [spotId]);
 
   if (loading) {
@@ -43,7 +50,7 @@ export default function SpotDetailScreen({ route, navigation }: Props) {
   if (!spot) {
     return (
       <View style={styles.center}>
-        <Text>This listing is no longer available.</Text>
+        <Text>{error ?? "This listing is no longer available."}</Text>
       </View>
     );
   }
