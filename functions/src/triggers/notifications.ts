@@ -30,6 +30,19 @@ async function getPushToken(userId: string): Promise<string | null> {
   return (snap.data()?.expoPushToken as string | undefined) ?? null;
 }
 
+export const onBookingMessageCreated = onDocumentCreated("bookings/{bookingId}/messages/{messageId}", async event => {
+  const message = event.data?.data();
+  if (!message) return;
+  const booking = (await db.doc(`bookings/${event.params.bookingId}`).get()).data();
+  if (!booking || ![booking.buyerId, booking.sellerId].includes(message.senderId)) return;
+  const conversation = (await db.doc(`conversations/${event.params.bookingId}`).get()).data();
+  if (conversation?.buyerBlocked || conversation?.sellerBlocked) return;
+  const token = await getPushToken(message.senderId === booking.buyerId ? booking.sellerId : booking.buyerId);
+  if (token) await sendExpoPush([{ to: token, title: "New SpotBnB message",
+    body: "You have a new message about your parking booking.",
+    data: { type: "booking_message", bookingId: event.params.bookingId } }]);
+});
+
 export const onBookingCreatedNotifySeller = onDocumentCreated("bookings/{bookingId}", async (event) => {
   const booking = event.data?.data();
   if (!booking) return;

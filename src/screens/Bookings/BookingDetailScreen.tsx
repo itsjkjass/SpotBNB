@@ -15,6 +15,8 @@ import { useAuth } from "../../hooks/useAuth";
 import { Booking } from "../../types/models";
 import { colors, spacing, radius } from "../../constants/theme";
 import type { BookingsStackParamList } from "../../navigation/types";
+import type { MainTabsParamList } from "../../navigation/types";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 
 type Props = NativeStackScreenProps<BookingsStackParamList, "BookingDetail">;
 
@@ -130,6 +132,12 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
       {canCancel && (
         <TouchableOpacity style={styles.dangerButton} onPress={handleCancel} disabled={busy}>
           {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Cancel Booking</Text>}
+        </TouchableOpacity>
+      )}
+
+      {booking.status !== "pending_payment" && (
+        <TouchableOpacity style={styles.button} onPress={() => navigation.getParent<BottomTabNavigationProp<MainTabsParamList>>()?.navigate("MessagesTab", { screen: "Conversation", params: { bookingId } })}>
+          <Text style={styles.buttonText}>{booking.status === "cancelled" ? "View booking messages" : `Message ${isBuyer ? "seller" : "buyer"}`}</Text>
         </TouchableOpacity>
       )}
 

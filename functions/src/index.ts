@@ -6,3 +6,5 @@ export { connectOnboardingCallback } from "./http/connectOnboardingCallback";
 export { onBookingCreatedNotifySeller, onBookingStatusChangedNotifyBuyer } from "./triggers/notifications";
 export { completeBookings } from "./scheduled/completeBookings";
 export { reconcileBookingPayments } from "./scheduled/reconcileBookingPayments";
+export { sendBookingMessage, markBookingMessagesRead, setBookingChatBlocked, reportBookingMessage } from "./callable/messages";
+export { onBookingMessageCreated } from "./triggers/notifications";

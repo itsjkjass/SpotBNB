@@ -11,6 +11,11 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function isBookingParticipant(bookingId) {
+      let booking = get(/databases/$(database)/documents/bookings/$(bookingId)).data;
+      return isSignedIn() && (booking.buyerId == request.auth.uid || booking.sellerId == request.auth.uid);
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId);
       // Signup may initialize onboarding to false, but only the backend may
@@ -45,6 +50,22 @@ service cloud.firestore {
       allow read: if isSignedIn()
         && (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
       allow write: if false;
+      match /messages/{messageId} {
+        allow read: if isBookingParticipant(bookingId);
+        // The callable checks confirmed payment, membership, blocks and rate limits.
+        allow write: if false;
+      }
+    }
+
+    match /conversations/{bookingId} {
+      allow get: if isBookingParticipant(bookingId);
+      allow list: if isSignedIn() &&
+        (resource.data.buyerId == request.auth.uid || resource.data.sellerId == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /messageReports/{reportId} {
+      allow read, write: if false;
     }
 
     match /reviews/{reviewId} {

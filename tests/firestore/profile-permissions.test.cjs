@@ -18,6 +18,41 @@ const profile = () => ({ uid: 'seller', email: 'seller@example.com', displayName
   roles: ['buyer'], stripeConnectOnboarded: false, createdAt: serverTimestamp() });
 const ownRef = () => doc(env.authenticatedContext('seller').firestore(), 'users/seller');
 
+test('booking messages and conversations are private, server-written records', async () => {
+  await env.withSecurityRulesDisabled(async context => {
+    const db = context.firestore();
+    await setDoc(doc(db, 'bookings/chat'), { buyerId: 'buyer', sellerId: 'seller', status: 'confirmed' });
+    await setDoc(doc(db, 'bookings/empty'), { buyerId: 'buyer', sellerId: 'seller', status: 'confirmed' });
+    await setDoc(doc(db, 'bookings/chat/messages/message'), { senderId: 'buyer', text: 'Hello', createdAt: 1 });
+    await setDoc(doc(db, 'conversations/chat'), { buyerId: 'buyer', sellerId: 'seller', lastMessage: 'Hello', updatedAt: 1 });
+    await setDoc(doc(db, 'messageReports/report'), { text: 'Private report' });
+  });
+  for (const uid of ['buyer', 'seller']) {
+    const db = env.authenticatedContext(uid).firestore();
+    await assertSucceeds(getDoc(doc(db, 'bookings/chat/messages/message')));
+    await assertSucceeds(getDocs(collection(db, 'bookings/chat/messages')));
+    await assertSucceeds(getDoc(doc(db, 'conversations/chat')));
+    await assertSucceeds(getDoc(doc(db, 'conversations/empty')));
+    const inbox = await assertSucceeds(getDocs(query(collection(db, 'conversations'), where(`${uid}Id`, '==', uid))));
+    assert.equal(inbox.size, 1);
+    await assertFails(getDocs(collection(db, 'conversations')));
+    await assertFails(setDoc(doc(db, 'bookings/chat/messages/forged'), { senderId: uid, text: 'Forged' }));
+    await assertFails(updateDoc(doc(db, 'bookings/chat/messages/message'), { text: 'Changed' }));
+    await assertFails(deleteDoc(doc(db, 'bookings/chat/messages/message')));
+    await assertFails(updateDoc(doc(db, 'conversations/chat'), { buyerBlocked: false }));
+    await assertFails(getDoc(doc(db, 'messageReports/report')));
+    await assertFails(setDoc(doc(db, 'messageReports/forged'), { text: 'Forged' }));
+  }
+  for (const context of [env.authenticatedContext('outsider'), env.unauthenticatedContext()]) {
+    const db = context.firestore();
+    await assertFails(getDoc(doc(db, 'bookings/chat/messages/message')));
+    await assertFails(getDocs(collection(db, 'bookings/chat/messages')));
+    await assertFails(getDoc(doc(db, 'conversations/chat')));
+    await assertFails(getDoc(doc(db, 'conversations/empty')));
+    await assertFails(getDocs(collection(db, 'conversations')));
+  }
+});
+
 test('sellers can save private listings before onboarding, but cannot publish them', async () => {
   await setDoc(ownRef(), profile());
   const db = env.authenticatedContext('seller').firestore();

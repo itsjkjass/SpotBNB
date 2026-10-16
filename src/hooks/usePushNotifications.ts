@@ -1,4 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../navigation/types";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
@@ -17,6 +20,25 @@ Notifications.setNotificationHandler({
 
 export function usePushNotifications() {
   const { user } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const handled = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    const openMessage = (response: Notifications.NotificationResponse | null) => {
+      if (!active || !response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
+      const { identifier, content } = response.notification.request;
+      const { type, bookingId } = content.data ?? {};
+      if (handled.current === identifier || type !== "booking_message" || typeof bookingId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(bookingId)) return;
+      handled.current = identifier;
+      navigation.navigate("Main", { screen: "MessagesTab", params: { screen: "Conversation", params: { bookingId } } });
+      Notifications.clearLastNotificationResponseAsync().catch(() => {});
+    };
+    const subscription = Notifications.addNotificationResponseReceivedListener(openMessage);
+    Notifications.getLastNotificationResponseAsync().then(openMessage).catch(() => {});
+    return () => { active = false; subscription.remove(); };
+  }, [user, navigation]);
 
   useEffect(() => {
     if (!user || !Device.isDevice) return;
@@ -43,7 +65,7 @@ export function usePushNotifications() {
       } catch (error) {
         // Remote push tokens require a development build (unsupported in Expo Go on newer SDKs) -
         // this is expected there and shouldn't block the rest of the app.
-        console.warn("Push notification registration skipped:", error); // eslint-disable-line no-console
+        console.warn("Push notification registration skipped:", error);
       }
     })();
   }, [user]);

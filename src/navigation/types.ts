@@ -1,5 +1,7 @@
+import type { NavigatorScreenParams } from "@react-navigation/native";
+
 export type RootStackParamList = {
-  Main: undefined;
+  Main: NavigatorScreenParams<MainTabsParamList> | undefined;
   Auth: undefined;
 };
 
@@ -25,9 +27,15 @@ export type ProfileStackParamList = {
   SellerOnboarding: undefined;
 };
 
+export type MessagesStackParamList = {
+  Inbox: undefined;
+  Conversation: { bookingId: string };
+};
+
 export type MainTabsParamList = {
   SearchTab: undefined;
   MyListingsTab: undefined;
   BookingsTab: undefined;
   ProfileTab: undefined;
+  MessagesTab: NavigatorScreenParams<MessagesStackParamList> | undefined;
 };

@@ -5,6 +5,7 @@ import SearchStack from "./SearchStack";
 import MyListingsStack from "./MyListingsStack";
 import BookingsStack from "./BookingsStack";
 import ProfileStack from "./ProfileStack";
+import MessagesStack from "./MessagesStack";
 import type { MainTabsParamList } from "./types";
 import { colors } from "../constants/theme";
 import RequireAccount from "../components/RequireAccount";
@@ -20,12 +21,16 @@ function AccountBookings() {
 function AccountProfile() {
   return <RequireAccount message="Log in to manage your profile and seller setup."><ProfileStack /></RequireAccount>;
 }
+function AccountMessages() {
+  return <RequireAccount message="Log in to talk with buyers and sellers about your confirmed bookings."><MessagesStack /></RequireAccount>;
+}
 
 const TAB_ICONS: Record<keyof MainTabsParamList, string> = {
   SearchTab: "📍",
   MyListingsTab: "🅿️",
   BookingsTab: "🗓️",
   ProfileTab: "👤",
+  MessagesTab: "✉",
 };
 
 export default function MainTabs() {
@@ -41,6 +46,7 @@ export default function MainTabs() {
       <Tab.Screen name="SearchTab" component={SearchStack} options={{ title: "Search" }} />
       <Tab.Screen name="MyListingsTab" component={AccountListings} options={{ title: "My Listings" }} />
       <Tab.Screen name="BookingsTab" component={AccountBookings} options={{ title: "Bookings" }} />
+      <Tab.Screen name="MessagesTab" component={AccountMessages} options={{ title: "Messages" }} />
       <Tab.Screen name="ProfileTab" component={AccountProfile} options={{ title: "Profile" }} />
     </Tab.Navigator>
   );
