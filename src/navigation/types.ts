@@ -3,6 +3,9 @@ import type { NavigatorScreenParams } from "@react-navigation/native";
 export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabsParamList> | undefined;
   Auth: undefined;
+  Help: undefined;
+  Privacy: undefined;
+  Tutorial: undefined;
 };
 
 export type SearchStackParamList = {
@@ -34,9 +37,9 @@ export type MessagesStackParamList = {
 };
 
 export type MainTabsParamList = {
-  SearchTab: undefined;
-  MyListingsTab: undefined;
-  BookingsTab: undefined;
-  ProfileTab: undefined;
+  SearchTab: NavigatorScreenParams<SearchStackParamList> | undefined;
+  MyListingsTab: NavigatorScreenParams<MyListingsStackParamList> | undefined;
+  BookingsTab: NavigatorScreenParams<BookingsStackParamList> | undefined;
+  ProfileTab: NavigatorScreenParams<ProfileStackParamList> | undefined;
   MessagesTab: NavigatorScreenParams<MessagesStackParamList> | undefined;
 };

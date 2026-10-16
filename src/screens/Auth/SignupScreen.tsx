@@ -8,7 +8,8 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../../navigation/types";
 import { signUp } from "../../services/auth";
 import { colors, spacing, radius } from "../../constants/theme";
 import type { AuthStackParamList } from "../../navigation/AuthStack";
@@ -76,6 +77,7 @@ export default function SignupScreen({ navigation }: Props) {
       <TouchableOpacity onPress={() => navigation.navigate("Login")}>
         <Text style={styles.link}>Already have an account? Log in</Text>
       </TouchableOpacity>
+      <TouchableOpacity onPress={() => navigation.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate("Privacy")}><Text style={styles.link}>Privacy policy status</Text></TouchableOpacity>
     </KeyboardAvoidingView>
   );
 }
