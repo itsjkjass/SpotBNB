@@ -5,6 +5,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { logOut } from "../../services/auth";
 import { colors, spacing, radius } from "../../constants/theme";
 import type { ProfileStackParamList } from "../../navigation/types";
+import DocumentBadge from "../../components/DocumentBadge";
 
 type Props = NativeStackScreenProps<ProfileStackParamList, "Profile">;
 
@@ -15,6 +16,10 @@ export default function ProfileScreen({ navigation }: Props) {
     <View style={styles.container}>
       <Text style={styles.name}>{profile?.displayName ?? user?.email}</Text>
       <Text style={styles.email}>{user?.email}</Text>
+      {user && <><DocumentBadge uid={user.uid} role="seller" /><DocumentBadge uid={user.uid} role="buyer" /></>}
+      <TouchableOpacity style={styles.row} onPress={() => navigation.navigate("DocumentCheck")}>
+        <Text style={styles.rowLabel}>Document checks</Text><Text style={styles.rowValue}>View →</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity style={styles.row} onPress={() => navigation.navigate("SellerOnboarding")}>
         <Text style={styles.rowLabel}>Seller payouts</Text>

@@ -14,6 +14,7 @@ import { getReviewsForSpot } from "../../services/reviews";
 import { ParkingSpot, Review } from "../../types/models";
 import { colors, spacing, radius } from "../../constants/theme";
 import type { SearchStackParamList } from "../../navigation/types";
+import DocumentBadge from "../../components/DocumentBadge";
 
 type Props = NativeStackScreenProps<SearchStackParamList, "SpotDetail">;
 
@@ -72,6 +73,7 @@ export default function SpotDetailScreen({ route, navigation }: Props) {
 
         <View style={styles.content}>
           <Text style={styles.title}>{spot.title}</Text>
+          <DocumentBadge uid={spot.ownerId} role="seller" />
           <Text style={styles.address}>{spot.address}</Text>
 
           <View style={styles.priceRow}>

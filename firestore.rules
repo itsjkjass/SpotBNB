@@ -68,6 +68,17 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /documentChecks/{userId}/roles/{role} {
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    // Only non-sensitive status/expiry fields are published here by the backend.
+    match /documentBadges/{userId} {
+      allow get: if true;
+      allow list, write: if false;
+    }
+
     match /reviews/{reviewId} {
       allow read: if true;
       allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;

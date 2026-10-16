@@ -6,6 +6,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MessagesStackParamList } from "../../navigation/types";
 import type { Booking } from "../../types/models";
 import { useAuth } from "../../hooks/useAuth";
+import DocumentBadge from "../../components/DocumentBadge";
 import { colors, radius, spacing } from "../../constants/theme";
 import { getOlderMessages, markMessagesRead, newMessageId, reportMessage, sendMessage, setChatBlocked, subscribeBooking, subscribeChat, subscribeConversation, type ChatMessage, type Conversation, type MessageCursor } from "../../services/messages";
 
@@ -109,6 +110,7 @@ function BookingConversation({ bookingId }: { bookingId: string }) {
   if (loading) return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
   return <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={headerHeight}>
     <View style={styles.header}><Text style={styles.title}>{booking?.spotTitle ?? "Booking conversation"}</Text>
+      {booking && <DocumentBadge uid={isBuyer ? booking.sellerId : booking.buyerId} role={isBuyer ? "seller" : "buyer"} />}
       <Text style={styles.muted}>Chat with the {isBuyer ? "seller" : "buyer"}. Hold a received message to report it.</Text>
       {booking && <TouchableOpacity onPress={block}><Text style={styles.link}>{ownBlocked ? "Unblock messages" : "Block messages"}</Text></TouchableOpacity>}
     </View>

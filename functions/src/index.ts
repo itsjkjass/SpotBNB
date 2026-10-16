@@ -8,3 +8,4 @@ export { completeBookings } from "./scheduled/completeBookings";
 export { reconcileBookingPayments } from "./scheduled/reconcileBookingPayments";
 export { sendBookingMessage, markBookingMessagesRead, setBookingChatBlocked, reportBookingMessage } from "./callable/messages";
 export { onBookingMessageCreated } from "./triggers/notifications";
+export { getDocumentCheckSettings, submitDocumentCheck, removeDocumentCheck } from "./callable/verification";

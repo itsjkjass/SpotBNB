@@ -18,6 +18,27 @@ const profile = () => ({ uid: 'seller', email: 'seller@example.com', displayName
   roles: ['buyer'], stripeConnectOnboarded: false, createdAt: serverTimestamp() });
 const ownRef = () => doc(env.authenticatedContext('seller').firestore(), 'users/seller');
 
+test('only the backend can publish badges and check results remain owner-only', async () => {
+  await env.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(), 'documentChecks/seller/roles/seller'), { status: 'checked', reasons: [], expiresAt: 123 });
+    await setDoc(doc(context.firestore(), 'documentBadges/seller'), { seller: { status: 'checked', expiresAt: 123 } });
+  });
+  const owner = env.authenticatedContext('seller').firestore();
+  await assertSucceeds(getDoc(doc(owner, 'documentChecks/seller/roles/seller')));
+  await assertSucceeds(getDoc(doc(owner, 'documentChecks/seller/roles/buyer')));
+  for (const context of [env.authenticatedContext('seller'), env.authenticatedContext('other'), env.unauthenticatedContext()]) {
+    const db = context.firestore();
+    await assertSucceeds(getDoc(doc(db, 'documentBadges/seller')));
+    await assertFails(getDocs(collection(db, 'documentBadges')));
+    await assertFails(setDoc(doc(db, 'documentBadges/seller'), { seller: { status: 'checked', expiresAt: 999 } }));
+    await assertFails(setDoc(doc(db, 'documentChecks/seller/roles/seller'), { status: 'checked' }));
+    await assertFails(deleteDoc(doc(db, 'documentChecks/seller/roles/seller')));
+  }
+  for (const context of [env.authenticatedContext('other'), env.unauthenticatedContext()]) {
+    await assertFails(getDoc(doc(context.firestore(), 'documentChecks/seller/roles/seller')));
+  }
+});
+
 test('booking messages and conversations are private, server-written records', async () => {
   await env.withSecurityRulesDisabled(async context => {
     const db = context.firestore();

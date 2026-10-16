@@ -22,8 +22,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       ITSAppUsesNonExemptEncryption: false,
       NSLocationWhenInUseUsageDescription:
         "SpotBnB uses your location to show nearby parking spots and to help buyers find your listing.",
-      NSCameraUsageDescription: "SpotBnB uses your camera to take photos of your parking spot listing.",
-      NSPhotoLibraryUsageDescription: "SpotBnB needs access to your photos to upload listing images.",
+      NSCameraUsageDescription: "SpotBnB uses your camera for listing photos and optional document checks, including a selfie.",
+      NSPhotoLibraryUsageDescription: "SpotBnB lets you choose listing photos and documents for optional checks.",
     },
   },
   android: {
@@ -63,8 +63,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-image-picker",
       {
-        photosPermission: "SpotBnB needs access to your photos to upload listing images.",
-        cameraPermission: "SpotBnB uses your camera to take photos of your parking spot listing.",
+        photosPermission: "SpotBnB lets you choose listing photos and documents for optional checks.",
+        cameraPermission: "SpotBnB uses your camera for listing photos and optional document checks, including a selfie.",
       },
     ],
     [

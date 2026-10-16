@@ -25,6 +25,7 @@ export type BookingsStackParamList = {
 export type ProfileStackParamList = {
   Profile: undefined;
   SellerOnboarding: undefined;
+  DocumentCheck: undefined;
 };
 
 export type MessagesStackParamList = {
