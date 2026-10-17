@@ -98,7 +98,7 @@ export default function MyListingsScreen({ navigation }: Props) {
             <Text accessibilityRole="header" style={ui.heading}>Your hosting</Text>
             <Text style={[ui.body, { marginTop: 8, marginBottom: 20 }]}>Put your space to good use.</Text>
             <View style={styles.shortcuts}>
-              <Choice icon="calendar-outline" label="Bookings" onPress={() => navigation.getParent<BottomTabNavigationProp<MainTabsParamList>>()?.navigate("BookingsTab")} />
+              <Choice icon="calendar-outline" label="Bookings" onPress={() => navigation.getParent<BottomTabNavigationProp<MainTabsParamList>>()?.navigate("BookingsTab", { screen: "BookingsList", params: { role: "seller" } })} />
               <Choice icon="wallet-outline" label="Earnings" onPress={() => navigation.getParent<BottomTabNavigationProp<MainTabsParamList>>()?.navigate("ProfileTab", { screen: "Earnings" })} />
             </View>
             {!payoutSetupSubmitted && <TouchableOpacity style={styles.payoutNotice} accessibilityRole="button" onPress={() => navigation.navigate("SellerOnboarding")}>

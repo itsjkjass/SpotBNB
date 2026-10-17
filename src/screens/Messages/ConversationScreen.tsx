@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: "700", color: colors.text }, muted: { color: colors.textMuted, marginTop: spacing.xs, lineHeight: 20 },
   link: { color: colors.primary, paddingVertical: spacing.sm, fontWeight: "600" }, error: { color: colors.danger },
   messages: { padding: spacing.md }, bubble: { maxWidth: "85%", borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm },
-  own: { alignSelf: "flex-end", backgroundColor: "#E1F2EA" }, received: { alignSelf: "flex-start", backgroundColor: colors.surface },
+  own: { alignSelf: "flex-end", backgroundColor: colors.primarySoft }, received: { alignSelf: "flex-start", backgroundColor: colors.paper },
   messageText: { color: colors.text, fontSize: 16, lineHeight: 22 }, time: { fontSize: 11, color: colors.textMuted, marginTop: spacing.xs },
   composer: { flexDirection: "row", alignItems: "flex-end", padding: spacing.sm, gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   input: { flex: 1, maxHeight: 120, minHeight: 44, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.sm, color: colors.text },

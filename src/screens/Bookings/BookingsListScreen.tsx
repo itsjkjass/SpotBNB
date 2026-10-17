@@ -1,5 +1,5 @@
 import { displayCalendarDate } from "../../utils/calendarDays";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -7,6 +7,8 @@ import { getBookingsForBuyer, getBookingsForSeller } from "../../services/bookin
 import { useAuth } from "../../hooks/useAuth";
 import { Booking } from "../../types/models";
 import { colors, spacing, radius } from "../../constants/theme";
+import { Choice, EmptyState, Icon, ui } from "../../components/ui";
+import { selectBookings } from "../../utils/bookingView";
 import type { BookingsStackParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<BookingsStackParamList, "BookingsList">;
@@ -25,56 +27,62 @@ const STATUS_COLORS: Record<Booking["status"], string> = {
   completed: colors.textMuted,
 };
 
-export default function BookingsListScreen({ navigation }: Props) {
+export default function BookingsListScreen({ navigation, route }: Props) {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  const [role, setRole] = useState<"buyer" | "seller">(route.params?.role ?? "buyer");
+  const [period, setPeriod] = useState<"upcoming" | "past">("upcoming");
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(timer); }, []);
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    if (route.params?.role) { setRole(route.params.role); navigation.setParams({ role: undefined }); }
     if (!user) return;
-    setLoading(true);
-    try {
-      const [asBuyer, asSeller] = await Promise.all([
-        getBookingsForBuyer(user.uid),
-        getBookingsForSeller(user.uid),
-      ]);
-      const merged = [...asBuyer, ...asSeller].sort((a, b) => b.startTime - a.startTime);
-      setBookings(merged);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
+    setLoading(true); setError(""); setNow(Date.now());
+    Promise.all([getBookingsForBuyer(user.uid), getBookingsForSeller(user.uid)])
+      .then(([buyer, seller]) => { if (active) setBookings([...buyer, ...seller]); })
+      .catch(() => { if (active) setError("Couldn't refresh bookings. Check your connection and try again."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  // The attempt counter deliberately reloads after a failed request.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, attempt, route.params?.role, navigation]));
+  const visible = selectBookings(bookings, user?.uid ?? "", role, period, now);
 
   return (
     <FlatList
-      data={bookings}
+      data={visible}
+      refreshing={loading}
+      onRefresh={() => setAttempt(n => n + 1)}
       keyExtractor={(item) => item.id}
       contentContainerStyle={styles.list}
-      ListEmptyComponent={
-        <View style={styles.center}>
-          <Text style={styles.notice}>No bookings yet.</Text>
+      ListHeaderComponent={<View style={styles.header}>
+        <Text accessibilityRole="header" style={ui.heading}>Your bookings</Text>
+        <Text style={ui.body}>Every parking day, in one place.</Text>
+        <View style={styles.filters}>
+          <Choice label="My parking" icon="car-outline" selected={role === "buyer"} onPress={() => setRole("buyer")} />
+          <Choice label="Hosting" icon="home-outline" selected={role === "seller"} onPress={() => setRole("seller")} />
         </View>
-      }
+        <View style={styles.filters}>
+          <Choice label="Upcoming & current" selected={period === "upcoming"} onPress={() => setPeriod("upcoming")} />
+          <Choice label="Past" selected={period === "past"} onPress={() => setPeriod("past")} />
+        </View>
+        {error ? <View><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Choice label="Try again" onPress={() => setAttempt(n => n + 1)} /></View> : null}
+      </View>}
+      ListEmptyComponent={loading ? <ActivityIndicator color={colors.primary} /> : !error ?
+        <EmptyState icon="calendar-outline" title={period === "past" ? "No past bookings" : "Your next parking day awaits"}
+          body={role === "seller" ? "Bookings for your spaces will appear here after someone reserves." : "Browse Explore to find a space. Your reservations and payment status will appear here."} /> : null}
       renderItem={({ item }) => (
         <TouchableOpacity
           style={styles.card}
           onPress={() => navigation.navigate("BookingDetail", { bookingId: item.id })}
         >
-          <View style={{ flex: 1 }}>
+          <View style={styles.cardTop}><Icon name={role === "buyer" ? "car-outline" : "home-outline"} color={colors.primary} /><Text style={[styles.status, { color: STATUS_COLORS[item.status] }]}>{item.cancellationRequestedAt && item.status !== "cancelled" ? "Cancellation processing" : STATUS_LABELS[item.status]}</Text></View>
+          <View>
             <Text style={styles.cardTitle}>{item.spotTitle}</Text>
             <Text style={styles.cardAddress}>{item.spotAddress}</Text>
             <Text style={styles.cardDate}>
@@ -82,11 +90,9 @@ export default function BookingsListScreen({ navigation }: Props) {
             </Text>
           </View>
           <View style={styles.cardMeta}>
-            <Text style={[styles.status, { color: STATUS_COLORS[item.status] }]}>
-              {STATUS_LABELS[item.status]}
-            </Text>
-            <Text style={styles.price}>${(item.totalPriceCents / 100).toFixed(2)}</Text>
-            <Text style={styles.role}>{item.buyerId === user?.uid ? "Booked" : "Hosted"}</Text>
+
+            <Text style={styles.price}>${(item.totalPriceCents / 100).toFixed(2)} CAD</Text>
+            <Text style={styles.role}>View booking →</Text>
           </View>
         </TouchableOpacity>
       )}
@@ -95,21 +101,24 @@ export default function BookingsListScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  header: { gap: spacing.md, marginBottom: spacing.lg },
+  filters: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  error: { color: colors.danger, marginBottom: spacing.sm },
+  cardTop: { ...ui.row, justifyContent: "space-between", marginBottom: spacing.md },
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing.lg },
   notice: { color: colors.textMuted },
-  list: { padding: spacing.lg },
+  list: { flexGrow: 1, padding: spacing.lg, backgroundColor: colors.background },
   card: {
-    flexDirection: "row",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.paper,
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.md,
   },
   cardTitle: { fontSize: 16, fontWeight: "700", color: colors.text },
   cardAddress: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
-  cardDate: { fontSize: 12, color: colors.textMuted, marginTop: spacing.xs },
-  cardMeta: { alignItems: "flex-end", justifyContent: "space-between" },
+  cardDate: { fontSize: 14, lineHeight: 22, color: colors.textMuted, marginTop: spacing.xs },
+  cardMeta: { ...ui.row, justifyContent: "space-between", flexWrap: "wrap", marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderColor: colors.border },
   status: { fontSize: 12, fontWeight: "700" },
   price: { fontSize: 15, fontWeight: "700", color: colors.text, marginTop: spacing.xs },
-  role: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
+  role: { fontSize: 14, color: colors.primary, marginTop: 2 },
 });

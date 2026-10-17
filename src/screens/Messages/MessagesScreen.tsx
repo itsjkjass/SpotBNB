@@ -7,6 +7,8 @@ import { subscribeInbox, type Conversation } from "../../services/messages";
 import { useAuth } from "../../hooks/useAuth";
 import { colors, radius, spacing } from "../../constants/theme";
 
+import { EmptyState, Icon, ui } from "../../components/ui";
+
 export default function MessagesScreen({ navigation }: NativeStackScreenProps<MessagesStackParamList, "Inbox">) {
   const { user } = useAuth();
   const [items, setItems] = useState<Conversation[]>([]);
@@ -23,10 +25,12 @@ export default function MessagesScreen({ navigation }: NativeStackScreenProps<Me
   if (loading) return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
   if (error) return <View style={styles.center}><Text>Couldn&apos;t load your messages.</Text><TouchableOpacity onPress={() => setAttempt(n => n + 1)}><Text style={styles.link}>Try again</Text></TouchableOpacity></View>;
   return <FlatList contentContainerStyle={styles.list} data={items} keyExtractor={item => item.id}
-    ListEmptyComponent={<View style={styles.center}><Text style={styles.title}>Your conversations live here</Text><Text style={styles.description}>After a booking is confirmed, open its details to message the buyer or seller.</Text></View>}
+    ListHeaderComponent={<View style={{ marginBottom: spacing.lg }}><Text style={ui.heading}>Your conversations</Text><Text style={ui.body}>Keep parking plans together.</Text></View>}
+    ListEmptyComponent={<EmptyState icon="chatbubbles-outline" title="A place to connect" body="After a booking is confirmed, open its details to message the buyer or seller." />}
     renderItem={({ item }) => {
       const unread = user?.uid === item.buyerId ? item.buyerUnread : item.sellerUnread;
       return <TouchableOpacity accessibilityRole="button" style={styles.row} onPress={() => navigation.navigate("Conversation", { bookingId: item.id })}>
+        <View style={styles.chatIcon}><Icon name="chatbubble-outline" color={colors.primary} /></View>
         <View style={{ flex: 1 }}><Text style={styles.title}>{item.spotTitle}</Text>
           <Text style={styles.description}>{user?.uid === item.buyerId ? "Seller" : "Buyer"} · {new Date(item.updatedAt).toLocaleDateString()}</Text>
           <Text numberOfLines={2} style={styles.preview}>{item.lastMessage || "No messages yet"}</Text></View>
@@ -36,8 +40,9 @@ export default function MessagesScreen({ navigation }: NativeStackScreenProps<Me
 }
 const styles = StyleSheet.create({
   center: { flex: 1, padding: spacing.lg, justifyContent: "center", alignItems: "center" },
-  list: { flexGrow: 1, padding: spacing.md, backgroundColor: colors.background },
-  row: { flexDirection: "row", alignItems: "center", padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, marginBottom: spacing.sm, gap: spacing.sm },
+  list: { flexGrow: 1, padding: spacing.lg, backgroundColor: colors.background },
+  row: { flexDirection: "row", alignItems: "center", paddingVertical: spacing.lg, borderBottomWidth: 1, borderColor: colors.border, marginBottom: spacing.sm, gap: spacing.sm },
+  chatIcon: { backgroundColor: colors.primarySoft, padding: 12, borderRadius: radius.md },
   title: { fontWeight: "700", fontSize: 17, color: colors.text },
   description: { color: colors.textMuted, marginTop: spacing.xs, lineHeight: 21 },
   preview: { color: colors.text, marginTop: spacing.sm },

@@ -21,7 +21,7 @@ export type MyListingsStackParamList = {
 };
 
 export type BookingsStackParamList = {
-  BookingsList: undefined;
+  BookingsList: { role?: "buyer" | "seller" } | undefined;
   BookingDetail: { bookingId: string };
 };
 

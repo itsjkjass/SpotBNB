@@ -5,8 +5,8 @@ import type { RootStackParamList } from "../../navigation/types";
 import { colors, radius, spacing } from "../../constants/theme";
 
 const questions = [
-  ["How do I find parking?", "Explore available spaces on Search. Open a listing to see its address, price and details. You can browse before creating an account; sign in when you are ready to book."],
-  ["How do bookings and payments work?", "Choose a space and your parking times, then review the total before paying. Check Bookings for the confirmed status. If payment is interrupted, return to that booking to continue rather than making another reservation."],
+  ["How do I find parking?", "Explore available spaces in Explore. Open a listing to see its address, price and details. You can browse before creating an account; sign in when you are ready to book."],
+  ["How do bookings and payments work?", "Choose a space and your calendar dates, then review the total before paying. Check Bookings for the confirmed status. If you close the payment sheet, continue payment from the same checkout. If you already left checkout, check the booking status before making another reservation."],
   ["How do I list my space?", "Open Host and publish your space. You can receive bookings before setting up payouts. Use the visibility switch to hide a listing when you do not want new bookings."],
   ["How do I withdraw my earnings?", "After a booking ends, open Earnings in Profile. Complete Stripe payout setup, then withdraw the earnings for that booking. The app shows your share after the platform fee. Withdrawal transfers money to your Stripe account; bank arrival follows Stripe's payout schedule. Refunded or disputed payments need review before earnings can be released."],
   ["How do I contact the buyer or seller?", "After payment confirms a booking, open its details and choose Message. Conversations also appear in Messages. Messaging is text only; cancelled bookings keep their history but cannot receive new messages."],

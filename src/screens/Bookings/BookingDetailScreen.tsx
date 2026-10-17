@@ -1,5 +1,5 @@
 import { displayCalendarDate } from "../../utils/calendarDays";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,9 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { getBooking, cancelBooking } from "../../services/bookings";
@@ -19,11 +22,18 @@ import type { BookingsStackParamList } from "../../navigation/types";
 import type { MainTabsParamList } from "../../navigation/types";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 
+import { useFocusEffect } from "@react-navigation/native";
+import { useHeaderHeight } from "@react-navigation/elements";
+import { EmptyState, ui } from "../../components/ui";
+
 type Props = NativeStackScreenProps<BookingsStackParamList, "BookingDetail">;
 
 export default function BookingDetailScreen({ route, navigation }: Props) {
   const { bookingId } = route.params;
   const { user } = useAuth();
+  const headerHeight = useHeaderHeight();
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -32,33 +42,34 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   // Current timestamp updated every second to avoid calling Date.now() during render
-  const [now, setNow] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const id = setInterval(() => {
       setNow(Date.now());
-    }, 1000);
+    }, 30_000);
     return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    getBooking(bookingId)
-      .then(setBooking)
-      .finally(() => setLoading(false));
-  }, [bookingId]);
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    setLoading(true); setError(""); setNow(Date.now());
+    getBooking(bookingId).then(value => {
+      if (active) { setBooking(value); if (!value) setError("This booking is unavailable."); }
+    }).catch(() => { if (active) setError("Couldn't load your booking. Check your connection and try again."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  // Retrying deliberately reloads this booking.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingId, attempt]));
 
-  if (loading || !booking || !user) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
+  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
+  if (error || !booking || !user) return <EmptyState icon="calendar-outline" title="Booking unavailable" body={error || "Please return to Bookings and try again."} action="Try again" onPress={() => setAttempt(n => n + 1)} />;
 
   const isBuyer = booking.buyerId === user.uid;
   const canCancel =
     (booking.status === "pending_payment" || booking.status === "confirmed") &&
-    booking.startTime > now;
+    booking.startTime > now && !booking.cancellationRequestedAt;
   const canReview = isBuyer && booking.status === "completed" && !reviewSubmitted;
 
   const handleCancel = () => {
@@ -109,7 +120,8 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={headerHeight}>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>{booking.spotTitle}</Text>
       <Text style={styles.address}>{booking.spotAddress}</Text>
 
@@ -132,6 +144,10 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
 
       {booking.timeZone && <Text style={styles.address}>Parking dates use {booking.timeZone} time.</Text>}
 
+      {booking.status === "pending_payment" && <View style={styles.paymentNotice}>
+        <Text style={ui.body}>Payment is not confirmed yet. If you just paid, refresh the status before trying another reservation. Unpaid reservations are released automatically.</Text>
+        <TouchableOpacity accessibilityRole="button" style={styles.button} onPress={() => setAttempt(n => n + 1)}><Text style={styles.buttonText}>Refresh payment status</Text></TouchableOpacity>
+      </View>}
       {canCancel && (
         <TouchableOpacity style={styles.dangerButton} onPress={handleCancel} disabled={busy}>
           {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Cancel Booking</Text>}
@@ -151,6 +167,9 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
             {[1, 2, 3, 4, 5].map((n) => (
               <TouchableOpacity
                 key={n}
+                accessibilityRole="radio"
+                accessibilityLabel={`${n} stars`}
+                accessibilityState={{ checked: rating === n }}
                 onPress={() => setRating(n)}
               >
                 <Text style={[styles.star, n <= rating && styles.starActive]}>★</Text>
@@ -171,24 +190,27 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
       )}
 
       {reviewSubmitted && <Text style={styles.thanks}>Thanks for your review!</Text>}
-    </View>
+    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: spacing.lg, backgroundColor: colors.background },
+  container: { flexGrow: 1, padding: spacing.lg, backgroundColor: colors.background },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  title: { fontSize: 20, fontWeight: "700", color: colors.text },
+  title: { ...ui.heading },
   address: { fontSize: 14, color: colors.textMuted, marginBottom: spacing.lg },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: spacing.md,
+    flexWrap: "wrap",
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   label: { color: colors.textMuted },
-  value: { fontWeight: "600", color: colors.text },
+  value: { fontWeight: "600", color: colors.text, flexShrink: 1 },
   dangerButton: {
     backgroundColor: colors.danger,
     borderRadius: radius.sm,
@@ -218,5 +240,6 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
     backgroundColor: colors.surface,
   },
+  paymentNotice: { padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.primarySoft, marginVertical: spacing.md },
   thanks: { marginTop: spacing.lg, color: colors.success, textAlign: "center", fontWeight: "600" },
 });
