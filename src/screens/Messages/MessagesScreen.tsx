@@ -1,3 +1,4 @@
+import { useScreenGuide } from "../../components/ScreenGuide";
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, FlatList, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
@@ -14,6 +15,7 @@ export default function MessagesScreen({ navigation }: NativeStackScreenProps<Me
   const [items, setItems] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const { firstTarget: guideFirstTarget, overlay: guideOverlay } = useScreenGuide("messages", !loading && !error);
   const [attempt, setAttempt] = useState(0);
   useFocusEffect(useCallback(() => {
     if (!user) return;
@@ -24,8 +26,8 @@ export default function MessagesScreen({ navigation }: NativeStackScreenProps<Me
   }, [user, attempt]));
   if (loading) return <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>;
   if (error) return <View style={styles.center}><Text>Couldn&apos;t load your messages.</Text><TouchableOpacity onPress={() => setAttempt(n => n + 1)}><Text style={styles.link}>Try again</Text></TouchableOpacity></View>;
-  return <FlatList contentContainerStyle={styles.list} data={items} keyExtractor={item => item.id}
-    ListHeaderComponent={<View style={{ marginBottom: spacing.lg }}><Text style={ui.heading}>Your conversations</Text><Text style={ui.body}>Keep parking plans together.</Text></View>}
+  return <><FlatList contentContainerStyle={styles.list} data={items} keyExtractor={item => item.id}
+    ListHeaderComponent={<View ref={guideFirstTarget} collapsable={false} style={{ marginBottom: spacing.lg }}><Text style={ui.heading}>Your conversations</Text><Text style={ui.body}>Keep parking plans together.</Text></View>}
     ListEmptyComponent={<EmptyState icon="chatbubbles-outline" title="A place to connect" body="After a booking is confirmed, open its details to message the buyer or seller." />}
     renderItem={({ item }) => {
       const unread = user?.uid === item.buyerId ? item.buyerUnread : item.sellerUnread;
@@ -36,7 +38,7 @@ export default function MessagesScreen({ navigation }: NativeStackScreenProps<Me
           <Text numberOfLines={2} style={styles.preview}>{item.lastMessage || "No messages yet"}</Text></View>
         {unread > 0 && <Text accessibilityLabel={`${unread} unread messages`} style={styles.badge}>{unread > 99 ? "99+" : unread}</Text>}
       </TouchableOpacity>;
-    }} />;
+    }} />{guideOverlay}</>;
 }
 const styles = StyleSheet.create({
   center: { flex: 1, padding: spacing.lg, justifyContent: "center", alignItems: "center" },

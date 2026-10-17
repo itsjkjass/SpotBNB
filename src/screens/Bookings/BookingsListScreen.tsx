@@ -1,3 +1,4 @@
+import { useScreenGuide } from "../../components/ScreenGuide";
 import { displayCalendarDate } from "../../utils/calendarDays";
 import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
@@ -31,6 +32,7 @@ export default function BookingsListScreen({ navigation, route }: Props) {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const { firstTarget: guideFirstTarget, secondTarget: guideSecondTarget, overlay: guideOverlay } = useScreenGuide("bookings", !loading);
 
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
@@ -54,6 +56,7 @@ export default function BookingsListScreen({ navigation, route }: Props) {
   const visible = selectBookings(bookings, user?.uid ?? "", role, period, now);
 
   return (
+    <>
     <FlatList
       data={visible}
       refreshing={loading}
@@ -63,11 +66,11 @@ export default function BookingsListScreen({ navigation, route }: Props) {
       ListHeaderComponent={<View style={styles.header}>
         <Text accessibilityRole="header" style={ui.heading}>Your bookings</Text>
         <Text style={ui.body}>Every parking day, in one place.</Text>
-        <View style={styles.filters}>
+        <View ref={guideFirstTarget} collapsable={false} style={styles.filters}>
           <Choice label="My parking" icon="car-outline" selected={role === "buyer"} onPress={() => setRole("buyer")} />
           <Choice label="Hosting" icon="home-outline" selected={role === "seller"} onPress={() => setRole("seller")} />
         </View>
-        <View style={styles.filters}>
+        <View ref={guideSecondTarget} collapsable={false} style={styles.filters}>
           <Choice label="Upcoming & current" selected={period === "upcoming"} onPress={() => setPeriod("upcoming")} />
           <Choice label="Past" selected={period === "past"} onPress={() => setPeriod("past")} />
         </View>
@@ -97,6 +100,8 @@ export default function BookingsListScreen({ navigation, route }: Props) {
         </TouchableOpacity>
       )}
     />
+    {guideOverlay}
+    </>
   );
 }
 

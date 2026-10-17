@@ -1,3 +1,4 @@
+import { useScreenGuide } from "../../components/ScreenGuide";
 import React, { useState, useCallback } from "react";
 import { View, Text, TextInput, StyleSheet, ActivityIndicator, Pressable, FlatList, ScrollView, Keyboard, Platform } from "react-native";
 import MapView, { Marker, Region } from "react-native-maps";
@@ -19,6 +20,7 @@ const DEFAULT_REGION: Region = { latitude: 43.6532, longitude: -79.3832, latitud
 export default function SearchScreen({ navigation }: Props) {
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
   const [loading, setLoading] = useState(true);
+  const { firstTarget: guideFirstTarget, secondTarget: guideSecondTarget, overlay: guideOverlay } = useScreenGuide("explore", !loading);
   const [error, setError] = useState<string | null>(null);
   const [region, setRegion] = useState<Region>(DEFAULT_REGION);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -84,7 +86,7 @@ export default function SearchScreen({ navigation }: Props) {
     <ScrollView style={styles.topScroll} contentContainerStyle={styles.top} keyboardShouldPersistTaps="handled">
       <Text accessibilityRole="header" style={ui.heading}>Park for the day.</Text>
       <Text style={ui.body}>A space near where you need to be.</Text>
-      <View style={styles.search}>
+      <View ref={guideFirstTarget} collapsable={false} style={styles.search}>
         <Icon name="search-outline" color={colors.primary} />
         <TextInput accessibilityLabel="City or destination" placeholder="Where are you headed?" placeholderTextColor={colors.textMuted}
           value={destination} onChangeText={setDestination} onSubmitEditing={() => findDestination()} returnKeyType="search" style={styles.input} />
@@ -132,8 +134,9 @@ export default function SearchScreen({ navigation }: Props) {
           {error && <Choice label="Try again" onPress={retry} />}
         </View>}
       </>}
-      <View style={styles.switcher}><Choice icon={listMode ? "map-outline" : "list-outline"} label={listMode ? "Map" : "List"} selected onPress={() => setListMode(!listMode)} /></View>
+      <View ref={guideSecondTarget} collapsable={false} style={styles.switcher}><Choice icon={listMode ? "map-outline" : "list-outline"} label={listMode ? "Map" : "List"} selected onPress={() => setListMode(!listMode)} /></View>
     </View>
+    {guideOverlay}
   </View>;
 }
 const styles = StyleSheet.create({

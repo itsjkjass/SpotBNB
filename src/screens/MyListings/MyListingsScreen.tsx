@@ -1,3 +1,4 @@
+import { useScreenGuide } from "../../components/ScreenGuide";
 import React, { useCallback, useState } from "react";
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Switch, Image } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
@@ -19,6 +20,7 @@ export default function MyListingsScreen({ navigation }: Props) {
   const { user, profile } = useAuth();
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
   const [loading, setLoading] = useState(true);
+  const { firstTarget: guideFirstTarget, secondTarget: guideSecondTarget, overlay: guideOverlay } = useScreenGuide("host", !loading);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const payoutSetupSubmitted = profile?.stripeConnectOnboarded === true;
@@ -97,7 +99,7 @@ export default function MyListingsScreen({ navigation }: Props) {
           <View style={styles.setup}>
             <Text accessibilityRole="header" style={ui.heading}>Your hosting</Text>
             <Text style={[ui.body, { marginTop: 8, marginBottom: 20 }]}>Put your space to good use.</Text>
-            <View style={styles.shortcuts}>
+            <View ref={guideFirstTarget} collapsable={false} style={styles.shortcuts}>
               <Choice icon="calendar-outline" label="Bookings" onPress={() => navigation.getParent<BottomTabNavigationProp<MainTabsParamList>>()?.navigate("BookingsTab", { screen: "BookingsList", params: { role: "seller" } })} />
               <Choice icon="wallet-outline" label="Earnings" onPress={() => navigation.getParent<BottomTabNavigationProp<MainTabsParamList>>()?.navigate("ProfileTab", { screen: "Earnings" })} />
             </View>
@@ -140,9 +142,12 @@ export default function MyListingsScreen({ navigation }: Props) {
           </View>
         )}
       />
+      <View ref={guideSecondTarget} collapsable={false} style={styles.fabAnchor}>
       <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate("CreateListing", undefined)}>
         <Text style={styles.fabText}>+ Add a space</Text>
       </TouchableOpacity>
+      </View>
+      {guideOverlay}
     </View>
   );
 }
@@ -171,11 +176,8 @@ const styles = StyleSheet.create({
   cardPrice: { fontSize: 14, fontWeight: "600", color: colors.primary, marginTop: spacing.xs },
   cardActions: { paddingHorizontal: spacing.md, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderTopWidth: 1, borderColor: colors.border },
   deleteText: { color: colors.danger, fontSize: 13, marginTop: spacing.sm },
+  fabAnchor: { position: "absolute", bottom: spacing.lg, right: spacing.lg, left: spacing.lg },
   fab: {
-    position: "absolute",
-    bottom: spacing.lg,
-    right: spacing.lg,
-    left: spacing.lg,
     backgroundColor: colors.primary,
     borderRadius: radius.sm,
     paddingVertical: spacing.md,

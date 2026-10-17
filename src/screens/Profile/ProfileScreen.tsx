@@ -1,3 +1,4 @@
+import { useScreenGuide } from "../../components/ScreenGuide";
 import React, { useState } from "react";
 import { ScrollView, Text, StyleSheet, TouchableOpacity, View, Alert } from "react-native";
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -18,6 +19,7 @@ function AccountRow({ title, detail, icon, onPress }: { title: string; detail: s
 }
 export default function ProfileScreen({ navigation }: Props) {
   const { user, profile } = useAuth();
+  const { firstTarget: guideFirstTarget, overlay: guideOverlay } = useScreenGuide("profile");
   const [busy, setBusy] = useState(false);
   const name = profile?.displayName || "Your account";
   const root = () => navigation.getParent()?.getParent<NativeStackNavigationProp<RootStackParamList>>();
@@ -27,8 +29,8 @@ export default function ProfileScreen({ navigation }: Props) {
     catch { Alert.alert("Couldn't sign out", "Please try again."); }
     finally { setBusy(false); }
   };
-  return <ScrollView contentContainerStyle={styles.container}>
-    <View style={styles.identity}>
+  return <><ScrollView contentContainerStyle={styles.container}>
+    <View ref={guideFirstTarget} collapsable={false} style={styles.identity}>
       <View style={styles.avatar}><Text style={styles.initial}>{name.charAt(0).toUpperCase()}</Text></View>
       <Text accessibilityRole="header" style={ui.heading}>{name}</Text>
       <Text style={ui.body}>{user?.email}</Text>
@@ -43,7 +45,7 @@ export default function ProfileScreen({ navigation }: Props) {
     <AccountRow title="Privacy policy" detail="How information is used · testing draft" icon="document-text-outline" onPress={() => root()?.navigate("Privacy")} />
     <AccountRow title="App guide" detail="Explore the app at your own pace" icon="compass-outline" onPress={() => root()?.navigate("Tutorial")} />
     <View style={{ marginTop: spacing.lg }}><Action label="Sign out" secondary busy={busy} onPress={signOut} /></View>
-  </ScrollView>;
+  </ScrollView>{guideOverlay}</>;
 }
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: spacing.lg, backgroundColor: colors.background },
