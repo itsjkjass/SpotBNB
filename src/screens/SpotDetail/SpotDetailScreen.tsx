@@ -15,6 +15,7 @@ import { ParkingSpot, Review } from "../../types/models";
 import { colors, spacing, radius } from "../../constants/theme";
 import type { SearchStackParamList } from "../../navigation/types";
 import DocumentBadge from "../../components/DocumentBadge";
+import { supportsDailyBooking } from "../../utils/calendarDays";
 
 type Props = NativeStackScreenProps<SearchStackParamList, "SpotDetail">;
 
@@ -77,10 +78,7 @@ export default function SpotDetailScreen({ route, navigation }: Props) {
           <Text style={styles.address}>{spot.address}</Text>
 
           <View style={styles.priceRow}>
-            <Text style={styles.price}>${spot.pricePerHour.toFixed(2)} CAD/hr</Text>
-            {spot.pricePerDay && (
-              <Text style={styles.priceSecondary}>${spot.pricePerDay.toFixed(2)} CAD/day</Text>
-            )}
+            <Text style={styles.price}>{spot.pricePerDay ? `$${spot.pricePerDay.toFixed(2)} CAD / day` : "Daily price not set"}</Text>
           </View>
 
           {spot.reviewCount > 0 && (
@@ -115,9 +113,10 @@ export default function SpotDetailScreen({ route, navigation }: Props) {
 
       <TouchableOpacity
         style={styles.bookButton}
+        disabled={!spot.isActive || !supportsDailyBooking(spot)}
         onPress={() => navigation.navigate("BookSpot", { spotId: spot.id })}
       >
-        <Text style={styles.bookButtonText}>Book this spot</Text>
+        <Text style={styles.bookButtonText}>{spot.isActive && supportsDailyBooking(spot) ? "Book this spot" : "Not available for daily booking"}</Text>
       </TouchableOpacity>
     </View>
   );

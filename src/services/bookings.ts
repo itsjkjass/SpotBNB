@@ -7,8 +7,9 @@ const bookingsCollection = collection(db, "bookings");
 
 interface CreateBookingRequest {
   spotId: string;
-  startTime: number;
-  endTime: number;
+  startDate: string;
+  endDate: string;
+  expectedTotalPriceCents: number;
 }
 
 interface CreateBookingResponse {

@@ -12,7 +12,7 @@ function fixture(prices = {}) {
       reads++;
       if (name === 'bookings') return { ...query, doc: () => ({ id: 'booking' }) };
       return { doc: () => ({ get: async () => ({ exists: true, data: () => name === 'spots'
-        ? { ownerId: 'seller', title: 'Parking', address: 'Test', isActive: true, pricePerHour: 5, ...prices }
+        ? { ownerId: 'seller', title: 'Parking', address: 'Test', isActive: true, pricePerDay: 5, ...prices }
         : { stripeConnectOnboarded: false } }) }) };
     },
     runTransaction: async callback => callback({ get: async () => ({ docs: [] }), set: (_, value) => writes.push(value) }),
@@ -25,9 +25,9 @@ function fixture(prices = {}) {
       payments++; return { client_secret: 'test', status: 'requires_payment_method' };
     } },
   });
-  const startTime = Date.now() + 3600000;
+  const startDate = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
   return { writes, reads: () => reads, payments: () => payments,
-    valid: { spotId: 'spot', startTime, endTime: startTime + 3600000 },
+    valid: { spotId: 'spot', startDate, endDate: startDate, expectedTotalPriceCents: 500 },
     run: data => createBooking({ auth: { uid: 'buyer' }, data }) };
 }
 
@@ -39,11 +39,11 @@ test('malformed request bodies fail before database access', async () => {
   }
 });
 
-test('invalid IDs and non-numeric or invalid dates fail before database access', async () => {
+test('invalid IDs and malformed calendar dates fail before database access', async () => {
   const badValues = [
     ...[{}, 12, ' ', 'spots/other', '.', '..'].map(spotId => ({ spotId })),
-    ...['123', NaN, Infinity, -Infinity, 1.5, 8640000000000001].flatMap(value => [{ startTime: value }, { endTime: value }]),
-    { startTime: 1, endTime: 2 },
+    ...['123', NaN, Infinity, null, 1.5, '2026-02-30', '2026-13-01'].flatMap(value => [{ startDate: value }, { endDate: value }]),
+    { startDate: '2030-01-02', endDate: '2030-01-01' },
   ];
   for (const override of badValues) {
     const f = fixture();
@@ -52,36 +52,44 @@ test('invalid IDs and non-numeric or invalid dates fail before database access',
   }
 });
 
-test('invalid stored rates cannot create a reservation or payment', async () => {
-  for (const value of [undefined, null, '5', NaN, Infinity, 0, -5]) {
-    for (const prices of [{ pricePerHour: value }, ...(value == null ? [] : [{ pricePerDay: value }])]) {
-      const f = fixture(prices);
-      await assert.rejects(f.run(f.valid), { code: 'failed-precondition' });
-      assert.equal(f.writes.length, 0);
-      assert.equal(f.payments(), 0);
-    }
-  }
-});
-
-test('unchargeable and oversized totals cannot reserve a spot', async () => {
-  for (const pricePerHour of [0.01, 1000000, Number.MAX_VALUE]) {
-    const f = fixture({ pricePerHour });
-    await assert.rejects(f.run(f.valid), { code: 'invalid-argument' });
+test('invalid stored daily rates cannot create a reservation or payment', async () => {
+  for (const value of [undefined, null, '5', NaN, Infinity, 0, -5, 0.01, 1000000, 5.001]) {
+    const f = fixture({ pricePerDay: value });
+    await assert.rejects(f.run(f.valid), { code: 'failed-precondition' });
     assert.equal(f.writes.length, 0);
     assert.equal(f.payments(), 0);
   }
 });
 
-test('valid hourly and rounded daily bookings preserve pricing', async () => {
-  const hourly = fixture();
-  await hourly.run(hourly.valid);
-  assert.equal(hourly.writes[0].totalPriceCents, 500);
-  assert.equal(hourly.writes[0].paymentFlow, 'separate_v1');
-  assert.equal(hourly.writes[0].paymentIntentRequest.transfer_data, undefined);
-  assert.equal(hourly.writes[0].paymentIntentRequest.application_fee_amount, undefined);
-  assert.equal(hourly.writes[0].paymentIntentRequest.transfer_group, 'booking_booking');
-  const daily = fixture({ pricePerDay: 30 });
-  await daily.run({ ...daily.valid, endTime: daily.valid.startTime + 25 * 3600000 });
-  assert.equal(daily.writes[0].totalPriceCents, 6000);
-  assert.equal(daily.writes[0].platformFeeCents, 720);
+test('same-date booking charges one day, independently of hourly legacy data', async () => {
+  const f = fixture({ pricePerHour: 999 });
+  await f.run(f.valid);
+  assert.equal(f.writes[0].totalPriceCents, 500);
+  assert.equal(f.writes[0].dayCount, 1);
+  assert.equal(f.writes[0].paymentFlow, 'separate_v1');
+  assert.equal(f.writes[0].paymentIntentRequest.transfer_data, undefined);
+  assert.equal(f.writes[0].paymentIntentRequest.application_fee_amount, undefined);
+  assert.equal(f.writes[0].paymentIntentRequest.transfer_group, 'booking_booking');
+});
+
+test('two selected calendar dates charge two days and keep exact cents', async () => {
+  const f = fixture({ pricePerDay: 30.01 });
+  await f.run({ ...f.valid, startDate: '2090-10-24', endDate: '2090-10-25', expectedTotalPriceCents: 6002 });
+  assert.equal(f.writes[0].totalPriceCents, 6002);
+  assert.equal(f.writes[0].platformFeeCents, 720);
+});
+
+test('changed prices, past dates and unsupported hours cannot reserve a spot', async () => {
+  for (const [prices, request, code] of [
+    [{ pricePerDay: 6 }, {}, 'failed-precondition'],
+    [{ availability: { type: 'recurring_hours' } }, {}, 'failed-precondition'],
+    [{ timeZone: 'invalid' }, {}, 'failed-precondition'],
+    [{}, { startDate: '2000-01-01', endDate: '2000-01-01' }, 'invalid-argument'],
+    [{ pricePerDay: 999999.99 }, { startDate: '2090-01-01', endDate: '2090-01-02' }, 'invalid-argument'],
+  ]) {
+    const f = fixture(prices);
+    await assert.rejects(f.run({ ...f.valid, ...request }), { code });
+    assert.equal(f.writes.length, 0);
+    assert.equal(f.payments(), 0);
+  }
 });

@@ -7,6 +7,7 @@ import { useAuth } from "../../hooks/useAuth";
 import type { ParkingSpot } from "../../types/models"; // Actually import
 import { colors, spacing, radius } from "../../constants/theme"; // Actually import
 import type { MyListingsStackParamList } from "../../navigation/types";
+import { supportsDailyBooking } from "../../utils/calendarDays";
 
 type Props = NativeStackScreenProps<MyListingsStackParamList, "MyListings">;
 
@@ -38,6 +39,10 @@ export default function MyListingsScreen({ navigation }: Props) {
   );
 
   const toggleActive = async (spot: ParkingSpot) => {
+    if (!spot.isActive && !supportsDailyBooking(spot)) {
+      Alert.alert("Update your listing", "Set a valid daily price and full-day availability before showing this space in search.");
+      return;
+    }
     setBusyId(spot.id);
     try {
       await updateSpot(spot.id, { isActive: !spot.isActive });
@@ -109,10 +114,11 @@ export default function MyListingsScreen({ navigation }: Props) {
             <View style={{ flex: 1 }}>
               <Text style={styles.cardTitle}>{item.title}</Text>
               <Text style={styles.cardAddress}>{item.address}</Text>
-              <Text style={styles.cardPrice}>${item.pricePerHour.toFixed(2)} CAD/hr</Text>
-              <Text style={styles.step}>{item.isActive ? "Visible in search" : "Hidden from search"}</Text>
+              <Text style={styles.cardPrice}>{item.pricePerDay ? `$${item.pricePerDay.toFixed(2)} CAD / day` : "Set a daily price to accept bookings"}</Text>
+              <Text style={styles.step}>{!supportsDailyBooking(item) ? "Update daily pricing / availability to appear in search" : item.isActive ? "Visible in search" : "Hidden from search"}</Text>
             </View>
             <View style={styles.cardActions}>
+              <TouchableOpacity disabled={busyId !== null} onPress={() => navigation.navigate("CreateListing", { spotId: item.id })}><Text style={styles.setupLink}>Edit</Text></TouchableOpacity>
               <Switch accessibilityLabel={`Show ${item.title} in search`} disabled={busyId !== null} value={item.isActive} onValueChange={() => toggleActive(item)} />
               <TouchableOpacity disabled={busyId !== null} onPress={() => confirmDelete(item)}>
                 <Text style={styles.deleteText}>Delete</Text>

@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView } from "react-native";
 import BookingDateTimePicker from "../../components/BookingDateTimePicker";
 import { useStripe } from "@stripe/stripe-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { getSpot } from "../../services/spots";
 import { requestBooking } from "../../services/bookings";
 import { ParkingSpot } from "../../types/models";
-import { colors, spacing, radius } from "../../constants/theme"; // Actually import
+import { colors, spacing, radius } from "../../constants/theme";
 import type { SearchStackParamList } from "../../navigation/types";
+
+import { dateInZone, parkingTimeZone, pickerDate, pickerDateString, quoteCalendarBooking } from "../../utils/calendarDays";
 
 type Props = NativeStackScreenProps<SearchStackParamList, "BookSpot">;
 
@@ -16,53 +18,48 @@ export default function BookSpotScreen({ route, navigation }: Props) {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
-  const [startTime, setStartTime] = useState<Date | null>(null);
-  const [endTime, setEndTime] = useState<Date | null>(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [minDate] = useState(new Date()); // today's date for minimum date picker
+  const [loading, setLoading] = useState(true);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [payment, setPayment] = useState<Awaited<ReturnType<typeof requestBooking>> | null>(null);
+  const [today, setToday] = useState("");
+  const submitting = useRef(false);
 
   useEffect(() => {
-    getSpot(spotId).then(setSpot);
+    let active = true;
+    getSpot(spotId).then(value => {
+      if (!active) return;
+      if (!value) throw new Error("This space is no longer available.");
+      const today = dateInZone(Date.now(), parkingTimeZone(value.timeZone));
+      setToday(today);
+      setSpot(value); setStartDate(today); setEndDate(today); setError(null);
+    }).catch(e => { if (active) setError(e.message || "Couldn't load this space."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [spotId, loadAttempt]);
 
-    // Set default times if not already set
-    if (!startTime) {
-      setStartTime(new Date(Date.now() + 60 * 60 * 1000)); // eslint-disable-line react-hooks/set-state-in-effect
-    }
-    if (!endTime) {
-      setEndTime(new Date(Date.now() + 3 * 60 * 60 * 1000)); // eslint-disable-line react-hooks/set-state-in-effect
-    }
-  }, [spotId, startTime, endTime]);
-
-  // Keep endTime >= startTime whenever startTime changes
-  useEffect(() => {
-    if (startTime && endTime && endTime < startTime) {
-      setEndTime(new Date(startTime.getTime() + 60 * 60 * 1000)); // eslint-disable-line react-hooks/set-state-in-effect
-    }
-  }, [startTime, endTime]);
-
-  const hours = startTime && endTime ? Math.max(0, (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60)) : 0;
-  const estimatedTotal = spot ? hours * spot.pricePerHour : 0;
+  let quote: ReturnType<typeof quoteCalendarBooking> | null = null;
+  let quoteError = "";
+  if (spot && startDate && endDate) {
+    try { quote = quoteCalendarBooking(startDate, endDate, spot.pricePerDay, spot.timeZone); }
+    catch (e) { quoteError = (e as Error).message; }
+  }
 
   const handleConfirmAndPay = async () => {
+    if (submitting.current || !quote) return;
+    submitting.current = true;
     setError(null);
-    if (!startTime || !endTime) {
-      setError("Select start and end times.");
-      return;
-    }
-    if (endTime.getTime() <= startTime.getTime()) {
-      setError("End time must be after start time.");
-      return;
-    }
-
     setProcessing(true);
     try {
-      // The server checks availability; clients can only read their own bookings.
-      const { paymentIntentClientSecret } = await requestBooking({
-        spotId,
-        startTime: startTime.getTime(),
-        endTime: endTime.getTime(),
+      // Retain the same reservation if the payment sheet is dismissed or fails.
+      const reservation = payment ?? await requestBooking({
+        spotId, startDate, endDate, expectedTotalPriceCents: quote.totalPriceCents,
       });
+      setPayment(reservation);
+      const { paymentIntentClientSecret } = reservation;
 
       const initResult = await initPaymentSheet({
         merchantDisplayName: "SpotBnB",
@@ -87,59 +84,53 @@ export default function BookSpotScreen({ route, navigation }: Props) {
       const message = (e as Error)?.message ?? "Something went wrong creating this booking.";
       setError(message);
     } finally {
+      submitting.current = false;
       setProcessing(false);
     }
   };
 
-  if (!spot) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+  if (loading || !spot) {
+    return <View style={styles.center}>
+      {loading ? <ActivityIndicator size="large" color={colors.primary} /> : <>
+        <Text style={styles.error}>{error}</Text>
+        <TouchableOpacity style={styles.button} onPress={() => { setLoading(true); setLoadAttempt(n => n + 1); }}>
+          <Text style={styles.buttonText}>Try again</Text>
+        </TouchableOpacity>
+      </>}
+    </View>;
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
       <Text style={styles.title}>{spot.title}</Text>
       <Text style={styles.address}>{spot.address}</Text>
-
-      <Text style={styles.label}>Start</Text>
-      <BookingDateTimePicker
-        value={startTime ?? new Date()}
-        onChange={setStartTime}
-        disabled={processing}
-        minimumDate={minDate}
-      />
-
-      <Text style={styles.label}>End</Text>
-      <BookingDateTimePicker
-        value={endTime ?? new Date()}
-        onChange={setEndTime}
-        disabled={processing}
-        minimumDate={startTime ?? minDate}
-      />
-
-      <View style={styles.summary}>
-        <Text style={styles.summaryLabel}>Duration</Text>
-        <Text style={styles.summaryValue}>{hours.toFixed(1)} hours</Text>
-      </View>
-      <View style={styles.summary}>
-        <Text style={styles.summaryLabel}>Estimated total</Text>
-        <Text style={styles.summaryValue}>${estimatedTotal.toFixed(2)} CAD</Text>
-      </View>
-
-      {error && <Text style={styles.error}>{error}</Text>}
-
-      <TouchableOpacity style={styles.button} onPress={handleConfirmAndPay} disabled={processing}>
-        {processing ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Confirm and Pay</Text>}
+      <Text style={styles.label}>First parking date</Text>
+      <BookingDateTimePicker value={pickerDate(startDate)} disabled={processing || Boolean(payment)}
+        minimumDate={pickerDate(today)}
+        onChange={date => { const value = pickerDateString(date); setStartDate(value); if (endDate < value) setEndDate(value); }} />
+      <Text style={styles.label}>Last parking date (included)</Text>
+      <BookingDateTimePicker value={pickerDate(endDate)} disabled={processing || Boolean(payment)}
+        minimumDate={pickerDate(startDate)} onChange={date => setEndDate(pickerDateString(date))} />
+      <Text style={styles.address}>Each selected date counts as one day, in {spot.timeZone ?? "America/Toronto"} time. Leave before midnight after your last parking date.</Text>
+      {quote && <>
+        <View style={styles.summary}>
+          <Text style={styles.summaryLabel}>${(quote.pricePerDayCents / 100).toFixed(2)} × {quote.dayCount} {quote.dayCount === 1 ? "day" : "days"}</Text>
+          <Text style={styles.summaryValue}>${(quote.totalPriceCents / 100).toFixed(2)} CAD</Text>
+        </View>
+        <Text style={styles.address}>Cancel before the first booked date begins for a refund. Same-day bookings cannot be cancelled after payment.</Text>
+      </>}
+      {(error || quoteError) ? <Text style={styles.error}>{error || quoteError}</Text> : null}
+      {payment && <Text style={styles.address}>Your reservation is held briefly while you finish payment. Retry here, or check its status in Bookings before starting another reservation.</Text>}
+      <TouchableOpacity style={[styles.button, (!quote || processing) && { opacity: 0.5 }]}
+        onPress={handleConfirmAndPay} disabled={processing || !quote}>
+        {processing ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{payment ? "Continue payment" : "Confirm and pay"}</Text>}
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: spacing.lg, backgroundColor: colors.background },
+  container: { flexGrow: 1, padding: spacing.lg, backgroundColor: colors.background },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   title: { fontSize: 20, fontWeight: "700", color: colors.text },
   address: { fontSize: 14, color: colors.textMuted, marginBottom: spacing.lg },

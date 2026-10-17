@@ -29,7 +29,7 @@ function render(platform) {
   }) };
 }
 
-test('Android opens date then time and commits only the completed selection', () => {
+test('Android commits one calendar date without opening an hourly picker', () => {
   const fixture = render('android');
   assert.equal(fixture.opened.length, 0);
   fixture.element.props.onPress();
@@ -37,12 +37,8 @@ test('Android opens date then time and commits only the completed selection', ()
   assert.equal(fixture.opened[0].minimumDate, fixture.minimumDate);
   const date = new Date('2026-10-02T10:00:00Z');
   fixture.opened[0].onChange({ type: 'set' }, date);
-  assert.equal(fixture.selected.length, 0);
-  assert.equal(fixture.opened[1].mode, 'time');
-  assert.equal(fixture.opened[1].value, date);
-  const time = new Date('2026-10-02T14:30:00Z');
-  fixture.opened[1].onChange({ type: 'set' }, time);
-  assert.equal(fixture.selected[0], time);
+  assert.equal(fixture.opened.length, 1);
+  assert.equal(fixture.selected[0], date);
 });
 test('dismissing the Android date dialog does not open time or change the booking', () => {
   const fixture = render('android');
@@ -51,16 +47,9 @@ test('dismissing the Android date dialog does not open time or change the bookin
   assert.equal(fixture.opened.length, 1);
   assert.equal(fixture.selected.length, 0);
 });
-test('dismissing the Android time dialog leaves the booking unchanged', () => {
-  const fixture = render('android');
-  fixture.element.props.onPress();
-  fixture.opened[0].onChange({ type: 'set' }, fixture.value);
-  fixture.opened[1].onChange({ type: 'dismissed' }, fixture.value);
-  assert.equal(fixture.selected.length, 0);
-});
-test('iOS retains the native combined datetime picker', () => {
+test('iOS uses a date-only picker', () => {
   const fixture = render('ios');
   assert.equal(fixture.element.type, 'NativePicker');
-  assert.equal(fixture.element.props.mode, 'datetime');
+  assert.equal(fixture.element.props.mode, 'date');
   assert.equal(fixture.opened.length, 0);
 });

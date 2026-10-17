@@ -27,8 +27,9 @@ export interface ParkingSpot {
     longitude: number;
   };
   photoUrls: string[];
-  pricePerHour: number;
+  pricePerHour?: number; // Legacy records only; never used to calculate new bookings.
   pricePerDay?: number;
+  timeZone?: string;
   currency: "cad";
   spotType: SpotType;
   vehicleSizes: VehicleSize[];
@@ -60,6 +61,11 @@ export interface Booking {
   sellerId: string;
   startTime: number;
   endTime: number;
+  startDate?: string;
+  endDate?: string;
+  dayCount?: number;
+  timeZone?: string;
+  pricePerDayCents?: number;
   totalPriceCents: number;
   platformFeeCents: number;
   currency: "cad";

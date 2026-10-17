@@ -1,3 +1,4 @@
+import { displayCalendarDate } from "../../utils/calendarDays";
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -113,12 +114,12 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
       <Text style={styles.address}>{booking.spotAddress}</Text>
 
       <View style={styles.row}>
-        <Text style={styles.label}>Start</Text>
-        <Text style={styles.value}>{new Date(booking.startTime).toLocaleString()}</Text>
+        <Text style={styles.label}>{booking.startDate ? "First date" : "Start"}</Text>
+        <Text style={styles.value}>{booking.startDate ? displayCalendarDate(booking.startDate) : new Date(booking.startTime).toLocaleString()}</Text>
       </View>
       <View style={styles.row}>
-        <Text style={styles.label}>End</Text>
-        <Text style={styles.value}>{new Date(booking.endTime).toLocaleString()}</Text>
+        <Text style={styles.label}>{booking.endDate ? "Last date (included)" : "End"}</Text>
+        <Text style={styles.value}>{booking.endDate ? displayCalendarDate(booking.endDate) : new Date(booking.endTime).toLocaleString()}</Text>
       </View>
       <View style={styles.row}>
         <Text style={styles.label}>Total</Text>
@@ -128,6 +129,8 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
         <Text style={styles.label}>Status</Text>
         <Text style={styles.value}>{booking.cancellationRequestedAt && booking.status !== "cancelled" ? "Cancellation processing" : booking.status.replace("_", " ")}</Text>
       </View>
+
+      {booking.timeZone && <Text style={styles.address}>Parking dates use {booking.timeZone} time.</Text>}
 
       {canCancel && (
         <TouchableOpacity style={styles.dangerButton} onPress={handleCancel} disabled={busy}>

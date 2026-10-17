@@ -1,3 +1,4 @@
+import { displayCalendarDate } from "../../utils/calendarDays";
 import React, { useCallback, useState } from "react";
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
@@ -77,7 +78,7 @@ export default function BookingsListScreen({ navigation }: Props) {
             <Text style={styles.cardTitle}>{item.spotTitle}</Text>
             <Text style={styles.cardAddress}>{item.spotAddress}</Text>
             <Text style={styles.cardDate}>
-              {new Date(item.startTime).toLocaleString()} → {new Date(item.endTime).toLocaleString()}
+              {item.startDate ? displayCalendarDate(item.startDate) : new Date(item.startTime).toLocaleString()} → {item.endDate ? displayCalendarDate(item.endDate) : new Date(item.endTime).toLocaleString()}
             </Text>
           </View>
           <View style={styles.cardMeta}>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,29 +13,48 @@ import {
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { createSpot, uploadSpotPhoto } from "../../services/spots";
+import { createSpot, getSpot, updateSpot, uploadSpotPhoto } from "../../services/spots";
+import { dailyRateCents, DEFAULT_PARKING_TIME_ZONE, PARKING_TIME_ZONES } from "../../utils/calendarDays";
 import { useAuth } from "../../hooks/useAuth";
 import { colors, spacing, radius } from "../../constants/theme";
 import type { MyListingsStackParamList } from "../../navigation/types";
-import { SpotType, VehicleSize } from "../../types/models";
+import { ParkingSpot, SpotType, VehicleSize } from "../../types/models";
 
 type Props = NativeStackScreenProps<MyListingsStackParamList, "CreateListing">;
 
 const SPOT_TYPES: SpotType[] = ["driveway", "garage", "lot", "street", "other"];
 const VEHICLE_SIZES: VehicleSize[] = ["compact", "standard", "suv_truck"];
 
-export default function CreateListingScreen({ navigation }: Props) {
+export default function CreateListingScreen({ navigation, route }: Props) {
   const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
-  const [pricePerHour, setPricePerHour] = useState("");
   const [pricePerDay, setPricePerDay] = useState("");
+  const [timeZone, setTimeZone] = useState<string>(DEFAULT_PARKING_TIME_ZONE);
+  const [loading, setLoading] = useState(Boolean(route.params?.spotId));
+  const [isActive, setIsActive] = useState(true);
+  const [original, setOriginal] = useState<ParkingSpot | null>(null);
   const [spotType, setSpotType] = useState<SpotType>("driveway");
   const [vehicleSizes, setVehicleSizes] = useState<VehicleSize[]>(["standard"]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!route.params?.spotId) return;
+    let active = true;
+    getSpot(route.params.spotId).then(spot => {
+      if (!active) return;
+      if (!spot || spot.ownerId !== user?.uid) throw new Error("Listing unavailable.");
+      setOriginal(spot);
+      setTitle(spot.title); setDescription(spot.description); setAddress(spot.address);
+      setPricePerDay(spot.pricePerDay == null ? "" : String(spot.pricePerDay));
+      setTimeZone(spot.timeZone ?? DEFAULT_PARKING_TIME_ZONE); setSpotType(spot.spotType);
+      setVehicleSizes(spot.vehicleSizes); setPhotos(spot.photoUrls); setIsActive(spot.isActive);
+      setLoading(false);
+    }).catch(() => { if (active) setError("Couldn't load this listing. Go back and try again."); });
+    return () => { active = false; };
+  }, [route.params?.spotId, user?.uid]);
 
   const toggleVehicleSize = (size: VehicleSize) => {
     setVehicleSizes((current) =>
@@ -61,50 +80,41 @@ export default function CreateListingScreen({ navigation }: Props) {
   const handleSubmit = async () => {
     setError(null);
     if (!user) return;
-    if (!title || !address || !pricePerHour) {
-      setError("Title, address, and hourly price are required.");
+    if (!title.trim() || !address.trim() || !pricePerDay || !vehicleSizes.length) {
+      setError("Add a title, address, daily price and at least one vehicle size.");
       return;
     }
-    const hourlyPrice = parseFloat(pricePerHour);
-    if (Number.isNaN(hourlyPrice) || hourlyPrice <= 0) {
-      setError("Enter a valid hourly price.");
-      return;
-    }
-
-    let dailyPrice: number | undefined;
-    if (pricePerDay) {
-      dailyPrice = parseFloat(pricePerDay);
-      if (Number.isNaN(dailyPrice) || dailyPrice <= 0) {
-        setError("Enter a valid daily price.");
-        return;
-      }
-    }
+    let dailyPrice: number;
+    try { dailyPrice = dailyRateCents(Number(pricePerDay)) / 100; }
+    catch (e) { setError((e as Error).message); return; }
 
     setSubmitting(true);
     try {
-      const geocoded = await Location.geocodeAsync(address);
+      const geocoded = original?.address === address ? [original.location] : await Location.geocodeAsync(address);
       if (geocoded.length === 0) {
         setError("Couldn't find that address. Try being more specific.");
         return;
       }
       const { latitude, longitude } = geocoded[0];
 
-      const photoUrls = await Promise.all(photos.map((uri) => uploadSpotPhoto(user.uid, uri)));
+      const photoUrls = await Promise.all(photos.map((uri) => uri.startsWith("https://") ? uri : uploadSpotPhoto(user.uid, uri)));
 
-      await createSpot(user.uid, {
+      const data = {
         title,
         description,
         address,
         location: { latitude, longitude },
         photoUrls,
-        pricePerHour: hourlyPrice,
         pricePerDay: dailyPrice,
-        currency: "cad",
+        timeZone,
+        currency: "cad" as const,
         spotType,
         vehicleSizes,
-        amenities: [],
-        availability: { type: "always" },
-      }, true);
+        amenities: original?.amenities ?? [],
+        availability: original?.availability ?? { type: "always" as const },
+      };
+      if (route.params?.spotId) await updateSpot(route.params.spotId, { ...data, isActive });
+      else await createSpot(user.uid, data, true);
 
       navigation.goBack();
     } catch (e: unknown) {
@@ -117,6 +127,7 @@ export default function CreateListingScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {loading ? <Text style={styles.error}>{error || "Loading your listing…"}</Text> : <>
       <Text style={styles.draftNotice}>Publish your space to receive bookings. Set up payouts later, before withdrawing your earnings. You can hide your listing at any time in My Listings.</Text>
       <Text style={styles.label}>Title</Text>
       <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Driveway near BMO Field" />
@@ -133,16 +144,7 @@ export default function CreateListingScreen({ navigation }: Props) {
       <Text style={styles.label}>Address</Text>
       <TextInput style={styles.input} value={address} onChangeText={setAddress} placeholder="123 Main St, Toronto, ON" />
 
-      <Text style={styles.label}>Price per hour (CAD)</Text>
-      <TextInput
-        style={styles.input}
-        value={pricePerHour}
-        onChangeText={setPricePerHour}
-        placeholder="5.00"
-        keyboardType="decimal-pad"
-      />
-
-      <Text style={styles.label}>Price per day (CAD, optional)</Text>
+      <Text style={styles.label}>Price per calendar day (CAD)</Text>
       <TextInput
         style={styles.input}
         value={pricePerDay}
@@ -150,6 +152,15 @@ export default function CreateListingScreen({ navigation }: Props) {
         placeholder="25.00"
         keyboardType="decimal-pad"
       />
+      <Text style={styles.draftNotice}>One price for each selected calendar date, in your space&apos;s local time zone. No hourly charges.</Text>
+      {original?.availability.type === "recurring_hours" && <View>
+        <Text style={styles.error}>This listing has restricted hours. Full calendar-day bookings require access throughout each booked date.</Text>
+        <TouchableOpacity onPress={() => setOriginal({ ...original, availability: { type: "always" } })}>
+          <Text style={styles.label}>Confirm this space is available all day</Text>
+        </TouchableOpacity>
+      </View>}
+      <Text style={styles.label}>Parking space time zone</Text>
+      <View style={styles.chipRow}>{PARKING_TIME_ZONES.map(([zone, label]) => <TouchableOpacity key={zone} onPress={() => setTimeZone(zone)} style={[styles.chip, timeZone === zone && styles.chipSelected]}><Text style={[styles.chipText, timeZone === zone && styles.chipTextSelected]}>{label}</Text></TouchableOpacity>)}</View>
 
       <Text style={styles.label}>Spot type</Text>
       <View style={styles.chipRow}>
@@ -192,8 +203,9 @@ export default function CreateListingScreen({ navigation }: Props) {
       {error && <Text style={styles.error}>{error}</Text>}
 
       <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={submitting}>
-        {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Publish Listing</Text>}
+        {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{route.params?.spotId ? "Save changes" : "Publish listing"}</Text>}
       </TouchableOpacity>
+      </>}
     </ScrollView>
   );
 }

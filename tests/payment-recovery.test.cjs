@@ -26,7 +26,7 @@ function fixture({ timeoutOnce = false, failSaveOnce = false } = {}) {
     collection(name) {
       if (name === 'bookings') return { ...query, doc: () => bookingRef };
       return { doc: () => ({ get: async () => ({ exists: true, data: () => name === 'spots'
-        ? { ownerId: 'seller', title: 'Parking', address: 'Test', isActive: true, pricePerHour: 5 }
+        ? { ownerId: 'seller', title: 'Parking', address: 'Test', isActive: true, pricePerDay: 5 }
         : { stripeConnectAccountId: 'acct_seller', stripeConnectOnboarded: true } }) }) };
     },
     runTransaction: async (callback) => callback({
@@ -64,7 +64,7 @@ function fixture({ timeoutOnce = false, failSaveOnce = false } = {}) {
     recover: () => loadBackend('services/bookingPayment.ts', dependencies).getOrCreateBookingPayment(bookingRef),
     sync: () => loadBackend('services/bookingPayment.ts', dependencies).syncBookingPaymentStatus(bookingRef, remoteIntent),
     create: () => createBooking({ auth: { uid: 'buyer' }, data: {
-      spotId: 'spot', startTime: Date.now() + 3600000, endTime: Date.now() + 7200000,
+      spotId: 'spot', startDate: '2090-10-24', endDate: '2090-10-24', expectedTotalPriceCents: 500,
     } }),
   };
 }

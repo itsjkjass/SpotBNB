@@ -3,11 +3,13 @@ import { db } from "../admin";
 import { stripeSecretKey, PLATFORM_FEE_PERCENT, PAYMENT_HOLD_MS } from "../config";
 import { getOrCreateBookingPayment } from "../services/bookingPayment";
 import type Stripe from "stripe";
+import { calendarDayCount, dailyRateCents, parkingTimeZone, quoteCalendarBooking } from "../lib/calendarDays";
 
 interface CreateBookingRequest {
   spotId: string;
-  startTime: number;
-  endTime: number;
+  startDate: string;
+  endDate: string;
+  expectedTotalPriceCents: number;
 }
 
 export const createBooking = onCall<CreateBookingRequest>(
@@ -21,18 +23,18 @@ export const createBooking = onCall<CreateBookingRequest>(
     if (!request.data || typeof request.data !== "object" || Array.isArray(request.data)) {
       throw new HttpsError("invalid-argument", "Invalid booking request.");
     }
-    const { spotId, startTime, endTime } = request.data;
+    const { spotId, startDate, endDate } = request.data;
     if (typeof spotId !== "string" || !spotId.trim() || spotId.includes("/") ||
         spotId === "." || spotId === "..") {
       throw new HttpsError("invalid-argument", "Invalid parking spot ID.");
     }
-    if (!Number.isSafeInteger(startTime) || !Number.isSafeInteger(endTime) ||
-        !Number.isFinite(new Date(startTime).getTime()) || !Number.isFinite(new Date(endTime).getTime()) ||
-        endTime <= startTime) {
-      throw new HttpsError("invalid-argument", "Invalid booking time range.");
+    if (typeof startDate !== "string" || typeof endDate !== "string") {
+      throw new HttpsError("invalid-argument", "Choose calendar dates. Please update the app if it still asks for hourly bookings.");
     }
-    if (startTime < Date.now() - 60_000) {
-      throw new HttpsError("invalid-argument", "Booking start time is in the past.");
+    try { calendarDayCount(startDate, endDate); }
+    catch { throw new HttpsError("invalid-argument", "Choose valid calendar dates in order."); }
+    if (!Number.isSafeInteger(request.data.expectedTotalPriceCents) || request.data.expectedTotalPriceCents < 50) {
+      throw new HttpsError("invalid-argument", "Review the daily price before booking.");
     }
 
     const spotSnap = await db.collection("spots").doc(spotId).get();
@@ -53,17 +55,19 @@ export const createBooking = onCall<CreateBookingRequest>(
       throw new HttpsError("failed-precondition", "This seller's account is unavailable.");
     }
 
-    if (typeof spot.pricePerHour !== "number" || !Number.isFinite(spot.pricePerHour) || spot.pricePerHour <= 0 ||
-        (spot.pricePerDay != null && (typeof spot.pricePerDay !== "number" ||
-          !Number.isFinite(spot.pricePerDay) || spot.pricePerDay <= 0))) {
-      throw new HttpsError("failed-precondition", "This parking spot has invalid pricing. Please contact the seller.");
+    if (spot.pricePerDay == null) throw new HttpsError("failed-precondition", "The seller needs to set a daily price before this space can be booked.");
+    try { dailyRateCents(spot.pricePerDay); parkingTimeZone(spot.timeZone); }
+    catch { throw new HttpsError("failed-precondition", "The seller needs to update this space's daily price or time zone."); }
+    if (spot.availability?.type === "recurring_hours") {
+      throw new HttpsError("failed-precondition", "This space's restricted hours do not support full calendar-day bookings yet.");
     }
-    const hours = (endTime - startTime) / (1000 * 60 * 60);
-    const rawTotal =
-      spot.pricePerDay && hours >= 24
-        ? Math.ceil(hours / 24) * spot.pricePerDay
-        : hours * spot.pricePerHour;
-    const totalPriceCents = Math.round(rawTotal * 100);
+    let quote;
+    try { quote = quoteCalendarBooking(startDate, endDate, spot.pricePerDay, spot.timeZone); }
+    catch (error) { throw new HttpsError("invalid-argument", error instanceof Error ? error.message : "Invalid booking dates."); }
+    const { startTime, endTime, totalPriceCents } = quote;
+    if (request.data.expectedTotalPriceCents !== totalPriceCents) {
+      throw new HttpsError("failed-precondition", "The daily price has changed. Go back and reopen checkout to review it.");
+    }
     const platformFeeCents = Math.round((totalPriceCents * PLATFORM_FEE_PERCENT) / 100);
 
     // Stripe accepts integer amounts with at most eight digits. Reject before
@@ -107,6 +111,8 @@ export const createBooking = onCall<CreateBookingRequest>(
         sellerId: spot.ownerId,
         startTime,
         endTime,
+        startDate, endDate, dayCount: quote.dayCount, timeZone: quote.timeZone,
+        pricePerDayCents: quote.pricePerDayCents,
         totalPriceCents,
         platformFeeCents,
         paymentFlow: "separate_v1",
@@ -129,6 +135,7 @@ export const createBooking = onCall<CreateBookingRequest>(
     return {
       bookingId: bookingRef.id,
       paymentIntentClientSecret: paymentIntent.client_secret,
+      totalPriceCents, dayCount: quote.dayCount,
     };
   }
 );

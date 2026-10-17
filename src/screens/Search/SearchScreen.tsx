@@ -8,6 +8,7 @@ import { getActiveSpots } from "../../services/spots";
 import { ParkingSpot } from "../../types/models";
 import { colors, spacing, radius } from "../../constants/theme";
 import type { SearchStackParamList } from "../../navigation/types";
+import { supportsDailyBooking } from "../../utils/calendarDays";
 
 type Props = NativeStackScreenProps<SearchStackParamList, "SearchMap">;
 
@@ -52,7 +53,7 @@ export default function SearchScreen({ navigation }: Props) {
     setError(null);
     try {
       const activeSpots = await getActiveSpots();
-      setSpots(activeSpots);
+      setSpots(activeSpots.filter(supportsDailyBooking));
       setSelectedSpot(null);
     } catch {
       setError("Couldn't load parking spots. Check your connection and try again.");
@@ -95,7 +96,7 @@ export default function SearchScreen({ navigation }: Props) {
         >
           <Text style={styles.cardTitle}>{selectedSpot.title}</Text>
           <Text style={styles.cardAddress}>{selectedSpot.address}</Text>
-          <Text style={styles.cardPrice}>{selectedSpot.pricePerHour.toFixed(2)} CAD/hr</Text>
+          <Text style={styles.cardPrice}>${selectedSpot.pricePerDay?.toFixed(2)} CAD / day</Text>
         </TouchableOpacity>
       )}
 
