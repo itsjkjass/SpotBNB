@@ -9,7 +9,7 @@ const Stack = createNativeStackNavigator<BookingsStackParamList>();
 
 export default function BookingsStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerTintColor: colors.primary }}>
+    <Stack.Navigator screenOptions={{ headerTintColor: colors.primary, headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false, headerTitleStyle: { fontSize: 18, fontWeight: "600" }, contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="BookingsList" component={BookingsListScreen} options={{ title: "Bookings" }} />
       <Stack.Screen
         name="BookingDetail"

@@ -11,7 +11,7 @@ const Stack = createNativeStackNavigator<ProfileStackParamList>();
 
 export default function ProfileStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerTintColor: colors.primary }}>
+    <Stack.Navigator screenOptions={{ headerTintColor: colors.primary, headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false, headerTitleStyle: { fontSize: 18, fontWeight: "600" }, contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: "Profile" }} />
       <Stack.Screen name="Earnings" component={EarningsScreen} options={{ title: "Earnings" }} />
       <Stack.Screen name="DocumentCheck" component={DocumentCheckScreen} options={{ title: "Document checks" }} />

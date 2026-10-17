@@ -10,8 +10,8 @@ export type RootStackParamList = {
 
 export type SearchStackParamList = {
   SearchMap: undefined;
-  SpotDetail: { spotId: string };
-  BookSpot: { spotId: string };
+  SpotDetail: { spotId: string; startDate?: string; endDate?: string };
+  BookSpot: { spotId: string; startDate?: string; endDate?: string };
 };
 
 export type MyListingsStackParamList = {

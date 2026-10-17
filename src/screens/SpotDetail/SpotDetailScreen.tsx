@@ -7,6 +7,7 @@ import {
   Image,
   ActivityIndicator,
   TouchableOpacity,
+  useWindowDimensions,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { getSpot } from "../../services/spots";
@@ -16,11 +17,14 @@ import { colors, spacing, radius } from "../../constants/theme";
 import type { SearchStackParamList } from "../../navigation/types";
 import DocumentBadge from "../../components/DocumentBadge";
 import { supportsDailyBooking } from "../../utils/calendarDays";
+import { displayCalendarDate } from "../../utils/calendarDays";
+import { Icon, ui } from "../../components/ui";
 
 type Props = NativeStackScreenProps<SearchStackParamList, "SpotDetail">;
 
 export default function SpotDetailScreen({ route, navigation }: Props) {
   const { spotId } = route.params;
+  const { width } = useWindowDimensions();
   const [spot, setSpot] = useState<ParkingSpot | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,11 +67,12 @@ export default function SpotDetailScreen({ route, navigation }: Props) {
         {spot.photoUrls.length > 0 ? (
           <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
             {spot.photoUrls.map((url) => (
-              <Image key={url} source={{ uri: url }} style={styles.photo} />
+              <Image key={url} accessibilityLabel={spot.title} source={{ uri: url }} style={[styles.photo, { width }]} />
             ))}
           </ScrollView>
         ) : (
-          <View style={[styles.photo, styles.photoPlaceholder]}>
+          <View style={[styles.photo, styles.photoPlaceholder, { width }]}>
+            <Icon name="car-outline" size={48} color={colors.primary} />
             <Text style={{ color: colors.textMuted }}>No photos yet</Text>
           </View>
         )}
@@ -87,15 +92,22 @@ export default function SpotDetailScreen({ route, navigation }: Props) {
             </Text>
           )}
 
-          <Text style={styles.sectionTitle}>Description</Text>
+          <Text style={styles.sectionTitle}>About this space</Text>
           <Text style={styles.description}>{spot.description}</Text>
 
-          <Text style={styles.sectionTitle}>Details</Text>
-          <Text style={styles.detail}>Type: {spot.spotType}</Text>
-          <Text style={styles.detail}>Vehicle sizes: {spot.vehicleSizes.join(", ")}</Text>
+          <View style={styles.facts}>
+            <View style={styles.fact}><Icon name="home-outline" color={colors.primary} /><Text style={styles.detail}>{spot.spotType.charAt(0).toUpperCase() + spot.spotType.slice(1)}</Text></View>
+            <View style={styles.fact}><Icon name="car-outline" color={colors.primary} /><Text style={styles.detail}>{spot.vehicleSizes.map(size => size === "suv_truck" ? "SUV / truck" : size.charAt(0).toUpperCase() + size.slice(1)).join(" · ")}</Text></View>
+          </View>
           {spot.amenities.length > 0 && (
             <Text style={styles.detail}>Amenities: {spot.amenities.join(", ")}</Text>
           )}
+          <TouchableOpacity accessibilityRole="button" disabled={!spot.isActive || !supportsDailyBooking(spot)} style={styles.dateRow} onPress={() => navigation.navigate("BookSpot", { ...route.params })}>
+            <Icon name="calendar-outline" color={colors.primary} />
+            <View style={{ flex: 1 }}><Text style={ui.label}>Your parking dates</Text><Text style={styles.detail}>{route.params.startDate && route.params.endDate ? `${displayCalendarDate(route.params.startDate)} – ${displayCalendarDate(route.params.endDate)}` : "Choose your calendar dates"}</Text></View>
+            <Icon name="chevron-forward" size={18} />
+          </TouchableOpacity>
+          <Text style={styles.detail}>Charged per selected date. Availability is confirmed at checkout.</Text>
 
           {reviews.length > 0 && (
             <>
@@ -111,13 +123,16 @@ export default function SpotDetailScreen({ route, navigation }: Props) {
         </View>
       </ScrollView>
 
-      <TouchableOpacity
-        style={styles.bookButton}
+      <View style={styles.footer}>
+        <View style={{ flex: 1 }}><Text style={styles.price}>{spot.pricePerDay ? `$${spot.pricePerDay.toFixed(2)}` : "Unavailable"}</Text><Text style={styles.detail}>CAD / calendar day</Text></View>
+        <TouchableOpacity
+        style={[styles.bookButton, (!spot.isActive || !supportsDailyBooking(spot)) && { opacity: 0.5 }]}
         disabled={!spot.isActive || !supportsDailyBooking(spot)}
-        onPress={() => navigation.navigate("BookSpot", { spotId: spot.id })}
+        onPress={() => navigation.navigate("BookSpot", { ...route.params })}
       >
-        <Text style={styles.bookButtonText}>{spot.isActive && supportsDailyBooking(spot) ? "Book this spot" : "Not available for daily booking"}</Text>
+        <Text style={styles.bookButtonText}>{spot.isActive && supportsDailyBooking(spot) ? "Reserve" : "Unavailable"}</Text>
       </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -125,18 +140,22 @@ export default function SpotDetailScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  photo: { width: 400, height: 240 },
+  photo: { aspectRatio: 1.3 },
   photoPlaceholder: { justifyContent: "center", alignItems: "center", backgroundColor: colors.surface },
   content: { padding: spacing.lg },
-  title: { fontSize: 22, fontWeight: "700", color: colors.text },
+  title: { ...ui.heading },
   address: { fontSize: 14, color: colors.textMuted, marginTop: spacing.xs },
   priceRow: { flexDirection: "row", alignItems: "baseline", marginTop: spacing.md, gap: spacing.sm },
   price: { fontSize: 20, fontWeight: "700", color: colors.primary },
   priceSecondary: { fontSize: 14, color: colors.textMuted },
   rating: { marginTop: spacing.xs, color: colors.accent, fontWeight: "600" },
-  sectionTitle: { fontSize: 16, fontWeight: "700", marginTop: spacing.lg, color: colors.text },
-  description: { marginTop: spacing.xs, color: colors.text, lineHeight: 20 },
-  detail: { marginTop: spacing.xs, color: colors.text },
+  sectionTitle: { ...ui.subheading, marginTop: spacing.lg },
+  description: { ...ui.body, marginTop: spacing.sm },
+  detail: { fontSize: 14, lineHeight: 20, color: colors.textMuted },
+  facts: { gap: spacing.md, marginTop: spacing.lg, paddingVertical: spacing.lg, borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.border },
+  fact: { ...ui.row },
+  dateRow: { ...ui.row, paddingVertical: spacing.lg, gap: spacing.md },
+  footer: { flexDirection: "row", alignItems: "center", padding: spacing.md, gap: spacing.md, borderTopWidth: 1, borderColor: colors.border, backgroundColor: colors.paper },
   reviewRow: {
     marginTop: spacing.sm,
     paddingBottom: spacing.sm,
@@ -147,7 +166,7 @@ const styles = StyleSheet.create({
   reviewComment: { color: colors.text, marginTop: 2 },
   bookButton: {
     backgroundColor: colors.primary,
-    margin: spacing.lg,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: radius.sm,
     alignItems: "center",

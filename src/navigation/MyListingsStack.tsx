@@ -10,13 +10,13 @@ const Stack = createNativeStackNavigator<MyListingsStackParamList>();
 
 export default function MyListingsStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerTintColor: colors.primary }}>
-      <Stack.Screen name="MyListings" component={MyListingsScreen} options={{ title: "My Listings" }} />
+    <Stack.Navigator screenOptions={{ headerTintColor: colors.primary, headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false, headerTitleStyle: { fontSize: 18, fontWeight: "600" }, contentStyle: { backgroundColor: colors.background } }}>
+      <Stack.Screen name="MyListings" component={MyListingsScreen} options={{ title: "Host" }} />
       <Stack.Screen name="SellerOnboarding" component={SellerOnboardingScreen} options={{ title: "Seller Payouts" }} />
       <Stack.Screen
         name="CreateListing"
         component={CreateListingScreen}
-        options={{ title: "New Listing" }}
+        options={({ route }) => ({ title: route.params?.spotId ? "Edit your space" : "Add your space" })}
       />
     </Stack.Navigator>
   );

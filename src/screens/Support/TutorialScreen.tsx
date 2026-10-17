@@ -9,7 +9,7 @@ import { colors, radius, spacing } from "../../constants/theme";
 export const TOUR_KEY = "spotbnb:intro-tour:v1";
 const steps = [
   { number: "01", title: "Find your next parking spot", text: "Explore nearby spaces, compare prices and read the details. You can browse freely and create an account when you are ready to book." },
-  { number: "02", title: "Have a space to share?", text: "Publish your space in My Listings and receive bookings. You can finish Stripe payout setup later, before withdrawing earnings after a booking ends." },
+  { number: "02", title: "Have a space to share?", text: "Publish your space in Host and receive bookings. You can finish Stripe payout setup later, before withdrawing earnings after a booking ends." },
   { number: "03", title: "Keep every booking together", text: "Manage reservations in Bookings and message the other person after payment confirms the booking. Find optional document checks in Profile and revisit this tour in Help." },
 ];
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Text } from "react-native";
+import { Icon, IconName } from "../components/ui";
 import SearchStack from "./SearchStack";
 import MyListingsStack from "./MyListingsStack";
 import BookingsStack from "./BookingsStack";
@@ -25,12 +25,12 @@ function AccountMessages() {
   return <RequireAccount message="Log in to talk with buyers and sellers about your confirmed bookings."><MessagesStack /></RequireAccount>;
 }
 
-const TAB_ICONS: Record<keyof MainTabsParamList, string> = {
-  SearchTab: "📍",
-  MyListingsTab: "🅿️",
-  BookingsTab: "🗓️",
-  ProfileTab: "👤",
-  MessagesTab: "✉",
+const TAB_ICONS: Record<keyof MainTabsParamList, IconName> = {
+  SearchTab: "search-outline",
+  MyListingsTab: "home-outline",
+  BookingsTab: "calendar-outline",
+  ProfileTab: "person-circle-outline",
+  MessagesTab: "chatbubble-ellipses-outline",
 };
 
 export default function MainTabs() {
@@ -40,12 +40,14 @@ export default function MainTabs() {
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarIcon: () => <Text>{TAB_ICONS[route.name as keyof MainTabsParamList]}</Text>,
+        tabBarStyle: { backgroundColor: colors.paper, borderTopColor: colors.border },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        tabBarIcon: ({ color, size }) => <Icon name={TAB_ICONS[route.name]} size={size} color={color} />,
       })}
     >
-      <Tab.Screen name="SearchTab" component={SearchStack} options={{ title: "Search" }} />
-      <Tab.Screen name="MyListingsTab" component={AccountListings} options={{ title: "My Listings" }} />
+      <Tab.Screen name="SearchTab" component={SearchStack} options={{ title: "Explore" }} />
       <Tab.Screen name="BookingsTab" component={AccountBookings} options={{ title: "Bookings" }} />
+      <Tab.Screen name="MyListingsTab" component={AccountListings} options={{ title: "Host" }} />
       <Tab.Screen name="MessagesTab" component={AccountMessages} options={{ title: "Messages" }} />
       <Tab.Screen name="ProfileTab" component={AccountProfile} options={{ title: "Profile" }} />
     </Tab.Navigator>

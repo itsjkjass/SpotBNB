@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Switch } from "react-native";
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Switch, Image } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { getSpotsByOwner, updateSpot, deleteSpot } from "../../services/spots";
@@ -8,6 +8,10 @@ import type { ParkingSpot } from "../../types/models"; // Actually import
 import { colors, spacing, radius } from "../../constants/theme"; // Actually import
 import type { MyListingsStackParamList } from "../../navigation/types";
 import { supportsDailyBooking } from "../../utils/calendarDays";
+
+import { Icon, ui, Choice } from "../../components/ui";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { MainTabsParamList } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<MyListingsStackParamList, "MyListings">;
 
@@ -91,13 +95,19 @@ export default function MyListingsScreen({ navigation }: Props) {
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           <View style={styles.setup}>
-            <Text style={styles.cardTitle}>Your seller setup</Text>
-            <Text style={styles.step}>✓ Account created</Text>
-            <Text style={styles.step}>{spots.length ? "✓ Listing saved" : "○ Add your first listing"}</Text>
-            <Text style={styles.step}>{payoutSetupSubmitted ? "✓ Payout details submitted" : "○ Set up payouts before withdrawing earnings"}</Text>
-            {!payoutSetupSubmitted && <TouchableOpacity accessibilityRole="button" onPress={() => navigation.navigate("SellerOnboarding")}>
-              <Text style={styles.setupLink}>Set up payouts →</Text>
+            <Text accessibilityRole="header" style={ui.heading}>Your hosting</Text>
+            <Text style={[ui.body, { marginTop: 8, marginBottom: 20 }]}>Put your space to good use.</Text>
+            <View style={styles.shortcuts}>
+              <Choice icon="calendar-outline" label="Bookings" onPress={() => navigation.getParent<BottomTabNavigationProp<MainTabsParamList>>()?.navigate("BookingsTab")} />
+              <Choice icon="wallet-outline" label="Earnings" onPress={() => navigation.getParent<BottomTabNavigationProp<MainTabsParamList>>()?.navigate("ProfileTab", { screen: "Earnings" })} />
+            </View>
+            {!payoutSetupSubmitted && <TouchableOpacity style={styles.payoutNotice} accessibilityRole="button" onPress={() => navigation.navigate("SellerOnboarding")}>
+              <Icon name="wallet-outline" color={colors.primary} />
+              <View style={{ flex: 1 }}><Text style={ui.label}>Get ready to receive your earnings</Text>
+              <Text style={[ui.body, { fontSize: 14 }]}>You can receive bookings now. Set up payouts before withdrawing.</Text></View>
+              <Icon name="chevron-forward" size={18} />
             </TouchableOpacity>}
+            <Text style={ui.subheading}>Your spaces · {spots.length}</Text>
             {error && <>
               <Text accessibilityRole="alert" style={styles.error}>{error}</Text>
               <TouchableOpacity accessibilityRole="button" onPress={load}><Text style={styles.setupLink}>Try again</Text></TouchableOpacity>
@@ -111,14 +121,17 @@ export default function MyListingsScreen({ navigation }: Props) {
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
+            {item.photoUrls[0] ? <Image accessibilityLabel={item.title} source={{ uri: item.photoUrls[0] }} style={styles.listingPhoto} /> : <View style={[styles.listingPhoto, styles.placeholder]}><Icon name="car-outline" size={36} color={colors.primary} /></View>}
+            <View style={styles.cardBody}>
             <View style={{ flex: 1 }}>
               <Text style={styles.cardTitle}>{item.title}</Text>
               <Text style={styles.cardAddress}>{item.address}</Text>
               <Text style={styles.cardPrice}>{item.pricePerDay ? `$${item.pricePerDay.toFixed(2)} CAD / day` : "Set a daily price to accept bookings"}</Text>
               <Text style={styles.step}>{!supportsDailyBooking(item) ? "Update daily pricing / availability to appear in search" : item.isActive ? "Visible in search" : "Hidden from search"}</Text>
             </View>
+            </View>
             <View style={styles.cardActions}>
-              <TouchableOpacity disabled={busyId !== null} onPress={() => navigation.navigate("CreateListing", { spotId: item.id })}><Text style={styles.setupLink}>Edit</Text></TouchableOpacity>
+              <TouchableOpacity disabled={busyId !== null} onPress={() => navigation.navigate("CreateListing", { spotId: item.id })}><Text style={styles.setupLink}>Edit space</Text></TouchableOpacity>
               <Switch accessibilityLabel={`Show ${item.title} in search`} disabled={busyId !== null} value={item.isActive} onValueChange={() => toggleActive(item)} />
               <TouchableOpacity disabled={busyId !== null} onPress={() => confirmDelete(item)}>
                 <Text style={styles.deleteText}>Delete</Text>
@@ -128,7 +141,7 @@ export default function MyListingsScreen({ navigation }: Props) {
         )}
       />
       <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate("CreateListing", undefined)}>
-        <Text style={styles.fabText}>+ New Listing</Text>
+        <Text style={styles.fabText}>+ Add a space</Text>
       </TouchableOpacity>
     </View>
   );
@@ -144,16 +157,19 @@ const styles = StyleSheet.create({
   setupLink: { color: colors.primary, fontWeight: "600", paddingVertical: spacing.md },
   error: { color: colors.danger, marginTop: spacing.sm },
   card: {
-    flexDirection: "row",
-    backgroundColor: colors.surface,
+    backgroundColor: colors.paper,
+    overflow: "hidden",
     borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
+  shortcuts: { flexDirection: "row", gap: 8, marginBottom: spacing.lg, flexWrap: "wrap" },
+  payoutNotice: { ...ui.row, gap: 12, padding: spacing.md, backgroundColor: colors.primarySoft, borderRadius: radius.md, marginBottom: spacing.lg },
+  listingPhoto: { width: "100%", aspectRatio: 1.9, backgroundColor: colors.primarySoft }, placeholder: { alignItems: "center", justifyContent: "center" },
+  cardBody: { padding: spacing.md },
   cardTitle: { fontSize: 16, fontWeight: "700", color: colors.text },
   cardAddress: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   cardPrice: { fontSize: 14, fontWeight: "600", color: colors.primary, marginTop: spacing.xs },
-  cardActions: { alignItems: "flex-end", justifyContent: "space-between" },
+  cardActions: { paddingHorizontal: spacing.md, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderTopWidth: 1, borderColor: colors.border },
   deleteText: { color: colors.danger, fontSize: 13, marginTop: spacing.sm },
   fab: {
     position: "absolute",

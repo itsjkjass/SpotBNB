@@ -17,10 +17,10 @@ function AccountBookSpot(props: NativeStackScreenProps<SearchStackParamList, "Bo
 
 export default function SearchStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerTintColor: colors.primary }}>
+    <Stack.Navigator screenOptions={{ headerTintColor: colors.primary, headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false, headerTitleStyle: { fontSize: 18, fontWeight: "600" }, contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="SearchMap" component={SearchScreen} options={({ navigation }) => ({ title: "SpotBnB", headerRight: () => <TouchableOpacity accessibilityRole="button" onPress={() => navigation.getParent<NativeStackNavigationProp<RootStackParamList>>("Root")?.navigate("Help")}><Text style={{ color: colors.primary, padding: 8 }}>Help</Text></TouchableOpacity> })} />
-      <Stack.Screen name="SpotDetail" component={SpotDetailScreen} options={{ title: "Parking Spot" }} />
-      <Stack.Screen name="BookSpot" component={AccountBookSpot} options={{ title: "Book Spot" }} />
+      <Stack.Screen name="SpotDetail" component={SpotDetailScreen} options={{ title: "Parking space" }} />
+      <Stack.Screen name="BookSpot" component={AccountBookSpot} options={{ title: "Your reservation" }} />
     </Stack.Navigator>
   );
 }

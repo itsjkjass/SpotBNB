@@ -51,6 +51,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     favicon: "./assets/favicon.png",
   },
   plugins: [
+    "expo-font",
     [
       "@stripe/stripe-react-native",
       {

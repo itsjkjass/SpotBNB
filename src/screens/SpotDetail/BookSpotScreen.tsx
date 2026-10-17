@@ -35,11 +35,13 @@ export default function BookSpotScreen({ route, navigation }: Props) {
       if (!value) throw new Error("This space is no longer available.");
       const today = dateInZone(Date.now(), parkingTimeZone(value.timeZone));
       setToday(today);
-      setSpot(value); setStartDate(today); setEndDate(today); setError(null);
+      const first = route.params.startDate && route.params.startDate >= today ? route.params.startDate : today;
+      const last = route.params.endDate && route.params.endDate >= first ? route.params.endDate : first;
+      setSpot(value); setStartDate(first); setEndDate(last); setError(null);
     }).catch(e => { if (active) setError(e.message || "Couldn't load this space."); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [spotId, loadAttempt]);
+  }, [spotId, loadAttempt, route.params.startDate, route.params.endDate]);
 
   let quote: ReturnType<typeof quoteCalendarBooking> | null = null;
   let quoteError = "";

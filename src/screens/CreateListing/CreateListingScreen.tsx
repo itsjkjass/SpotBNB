@@ -9,6 +9,7 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Platform,
 } from "react-native";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
@@ -90,6 +91,10 @@ export default function CreateListingScreen({ navigation, route }: Props) {
 
     setSubmitting(true);
     try {
+      if (Platform.OS === "android" && original?.address !== address) {
+        const permission = await Location.requestForegroundPermissionsAsync();
+        if (!permission.granted) throw new Error("Allow location access to look up your parking address, then try again.");
+      }
       const geocoded = original?.address === address ? [original.location] : await Location.geocodeAsync(address);
       if (geocoded.length === 0) {
         setError("Couldn't find that address. Try being more specific.");
