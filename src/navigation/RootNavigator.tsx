@@ -1,4 +1,5 @@
 import React from "react";
+import * as SplashScreen from "expo-splash-screen";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "./types";
@@ -27,7 +28,10 @@ export default function RootNavigator() {
   const reducedMotion = useReducedMotion();
   return (
     <GuideProvider>
-    <NavigationContainer>
+    <NavigationContainer onReady={() => {
+      SplashScreen.setOptions({ fade: !reducedMotion, duration: reducedMotion ? 0 : 250 });
+      void SplashScreen.hideAsync().catch(() => {});
+    }}>
       <Stack.Navigator id="Root" screenOptions={{ headerShown: false, animation: reducedMotion ? "none" : "slide_from_bottom" }}>
         <Stack.Screen name="Main" component={AppTabs} />
         <Stack.Screen name="Help" component={HelpScreen} options={{ headerShown: true, title: "Help", headerTintColor: colors.primary }} />

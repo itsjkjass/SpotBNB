@@ -11,7 +11,9 @@ function render(platform) {
   const exports = {};
   const dependencies = {
     react: { createElement: (type, props, ...children) => ({ type, props, children }) },
-    'react-native': { Platform: { OS: platform }, Text: 'Text', TouchableOpacity: 'Button' },
+    'react-native': { Platform: { OS: platform }, Text: 'Text' },
+    './Motion': { MotionPressable: 'Button' },
+    '../constants/theme': { colors: { text: '#1A2420', primary: '#0B6E4F' } },
     '@react-native-community/datetimepicker': {
       __esModule: true, default: 'NativePicker',
       DateTimePickerAndroid: { open: (options) => opened.push(options) },

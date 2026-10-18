@@ -1,6 +1,8 @@
 import React from "react";
-import { Platform, Text, TouchableOpacity } from "react-native";
+import { Platform, Text } from "react-native";
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
+import { colors } from "../constants/theme";
+import { MotionPressable } from "./Motion";
 
 interface Props {
   value: Date;
@@ -12,7 +14,7 @@ interface Props {
 export default function BookingDateTimePicker({ value, minimumDate, onChange, disabled }: Props) {
   if (Platform.OS !== "android") {
     return <DateTimePicker value={value} minimumDate={minimumDate} mode="date"
-      display="compact" disabled={disabled} onChange={(_, date) => date && onChange(date)} />;
+      themeVariant="light" accentColor={colors.primary} display="compact" disabled={disabled} onChange={(_, date) => date && onChange(date)} />;
   }
 
   const open = () => {
@@ -25,7 +27,7 @@ export default function BookingDateTimePicker({ value, minimumDate, onChange, di
     });
   };
 
-  return <TouchableOpacity accessibilityRole="button" disabled={disabled} onPress={open}>
-    <Text style={{ fontSize: 17, paddingVertical: 14 }}>{value.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</Text>
-  </TouchableOpacity>;
+  return <MotionPressable accessibilityRole="button" disabled={disabled} onPress={open}>
+    <Text style={{ color: colors.text, fontSize: 17, paddingVertical: 14 }}>{value.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</Text>
+  </MotionPressable>;
 }

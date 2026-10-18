@@ -29,9 +29,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: ANDROID_PACKAGE,
     adaptiveIcon: {
-      backgroundColor: "#E6F4FE",
+      backgroundColor: "#084F38",
       foregroundImage: "./assets/android-icon-foreground.png",
-      backgroundImage: "./assets/android-icon-background.png",
       monochromeImage: "./assets/android-icon-monochrome.png",
     },
     predictiveBackGestureEnabled: false,
@@ -52,6 +51,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     "expo-font",
+    ["expo-splash-screen", {
+      backgroundColor: "#084F38",
+      image: "./assets/splash-icon.png",
+      imageWidth: 180,
+      resizeMode: "contain",
+      dark: { backgroundColor: "#084F38", image: "./assets/splash-icon.png" },
+    }],
     [
       "@stripe/stripe-react-native",
       {
@@ -71,7 +77,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-notifications",
       {
-        icon: "./assets/icon.png",
+        icon: "./assets/notification-icon.png",
         color: "#0B6E4F",
       },
     ],
