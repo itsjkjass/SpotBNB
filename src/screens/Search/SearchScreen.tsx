@@ -10,8 +10,8 @@ import { getActiveSpots } from "../../services/spots";
 import { ParkingSpot, VehicleSize } from "../../types/models";
 import { colors, depth, spacing, radius } from "../../constants/theme";
 import type { SearchStackParamList } from "../../navigation/types";
-import { dateInZone, DEFAULT_PARKING_TIME_ZONE, pickerDate, pickerDateString, supportsDailyBooking } from "../../utils/calendarDays";
-import BookingDateTimePicker from "../../components/BookingDateTimePicker";
+import { dateInZone, DEFAULT_PARKING_TIME_ZONE, supportsDailyBooking } from "../../utils/calendarDays";
+import BookingCalendar from "../../components/BookingCalendar";
 import SpotCard from "../../components/SpotCard";
 import { Choice, EmptyState, Icon, ui } from "../../components/ui";
 
@@ -96,20 +96,10 @@ export default function SearchScreen({ navigation }: Props) {
         </Pressable>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choices}>
-        <Choice icon="calendar-outline" label={datesChosen ? `${startDate.slice(5)} — ${endDate.slice(5)}` : "Choose dates"} selected={datesOpen} onPress={() => setDatesOpen(!datesOpen)} />
+        <Choice icon="calendar-outline" label={datesChosen ? `${startDate.slice(5)} — ${endDate.slice(5)}` : "Choose dates"} selected={datesChosen} onPress={() => { Keyboard.dismiss(); setDatesOpen(true); }} />
         <Choice label="Garage" selected={garage} onPress={() => setGarage(!garage)} />
         <Choice label="SUV / truck" selected={vehicle === "suv_truck"} onPress={() => setVehicle(vehicle ? null : "suv_truck")} />
       </ScrollView>
-      {datesOpen && <Reveal style={styles.dates}>
-        <Text style={ui.label}>First date</Text>
-        <BookingDateTimePicker value={pickerDate(startDate)} minimumDate={pickerDate(today)} onChange={date => {
-          const value = pickerDateString(date); setStartDate(value); if (endDate < value) setEndDate(value); setDatesChosen(true);
-        }} />
-        <Text style={ui.label}>Last date · included</Text>
-        <BookingDateTimePicker value={pickerDate(endDate)} minimumDate={pickerDate(startDate)} onChange={date => { setEndDate(pickerDateString(date)); setDatesChosen(true); }} />
-        <Text style={styles.note}>Availability is confirmed at checkout in the space’s time zone.</Text>
-        <Choice label="Use these dates" onPress={() => { setDatesChosen(true); setDatesOpen(false); }} />
-      </Reveal>}
       {locationError ? <Text accessibilityRole="alert" style={styles.error}>{locationError}</Text> : null}
     </ScrollView>
     <View style={[styles.results, !listMode && styles.mapFrame]}><View style={styles.resultsClip}>
@@ -139,13 +129,15 @@ export default function SearchScreen({ navigation }: Props) {
     </View>
     </View>
     {guideOverlay}
+    {datesOpen && <BookingCalendar startDate={startDate} endDate={endDate} minimumDate={today} onClose={() => setDatesOpen(false)}
+      onConfirm={(first, last) => { setStartDate(first); setEndDate(last); setDatesChosen(true); setDatesOpen(false); }} />}
   </View>;
 }
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background }, topScroll: { flexGrow: 0, maxHeight: "60%" }, top: { padding: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md, gap: 10 },
   search: { ...depth.soft, flexDirection: "row", alignItems: "center", backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingLeft: spacing.md },
   input: { flex: 1, minHeight: 54, fontSize: 16, color: colors.text, paddingHorizontal: 10 }, iconButton: { minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" },
-  choices: { gap: 8 }, dates: { gap: 4, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md },
+  choices: { gap: 8 },
   note: { color: colors.textMuted, fontSize: 14, lineHeight: 20 }, error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
   results: { flex: 1, minHeight: 180 }, mapFrame: { ...depth.raised, marginHorizontal: spacing.md, marginBottom: spacing.md, borderRadius: radius.lg, backgroundColor: colors.primarySoft }, resultsClip: { flex: 1, borderRadius: radius.lg, overflow: "hidden" }, list: { padding: spacing.lg, paddingBottom: 80 }, resultsLabel: { ...ui.label, marginBottom: spacing.md },
   mapTools: { position: "absolute", top: 16, left: 20, flexDirection: "row", gap: 12, alignItems: "center" },
