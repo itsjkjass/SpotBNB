@@ -6,7 +6,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { getSpotsByOwner, updateSpot, deleteSpot } from "../../services/spots";
 import { useAuth } from "../../hooks/useAuth";
 import type { ParkingSpot } from "../../types/models"; // Actually import
-import { colors, spacing, radius } from "../../constants/theme"; // Actually import
+import { colors, depth, spacing, radius } from "../../constants/theme"; // Actually import
 import type { MyListingsStackParamList } from "../../navigation/types";
 import { supportsDailyBooking } from "../../utils/calendarDays";
 
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
   step: { color: colors.textMuted, marginTop: spacing.sm },
   setupLink: { color: colors.primary, fontWeight: "600", paddingVertical: spacing.md },
   error: { color: colors.danger, marginTop: spacing.sm },
-  card: {
+  card: { ...depth.soft,
     backgroundColor: colors.paper,
     overflow: "hidden",
     borderRadius: radius.md,
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   cardActions: { paddingHorizontal: spacing.md, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderTopWidth: 1, borderColor: colors.border },
   deleteText: { color: colors.danger, fontSize: 13, marginTop: spacing.sm },
   fabAnchor: { position: "absolute", bottom: spacing.lg, right: spacing.lg, left: spacing.lg },
-  fab: {
+  fab: { ...depth.raised,
     backgroundColor: colors.primary,
     borderRadius: radius.sm,
     paddingVertical: spacing.md,

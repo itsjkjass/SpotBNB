@@ -6,7 +6,7 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { MessagesStackParamList } from "../../navigation/types";
 import { subscribeInbox, type Conversation } from "../../services/messages";
 import { useAuth } from "../../hooks/useAuth";
-import { colors, radius, spacing } from "../../constants/theme";
+import { colors, depth, radius, spacing } from "../../constants/theme";
 
 import { EmptyState, Icon, ui } from "../../components/ui";
 
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, padding: spacing.lg, justifyContent: "center", alignItems: "center" },
   list: { flexGrow: 1, padding: spacing.lg, backgroundColor: colors.background },
   row: { flexDirection: "row", alignItems: "center", paddingVertical: spacing.lg, borderBottomWidth: 1, borderColor: colors.border, marginBottom: spacing.sm, gap: spacing.sm },
-  chatIcon: { backgroundColor: colors.primarySoft, padding: 12, borderRadius: radius.md },
+  chatIcon: { ...depth.soft, backgroundColor: colors.primarySoft, padding: 12, borderRadius: radius.md },
   title: { fontWeight: "700", fontSize: 17, color: colors.text },
   description: { color: colors.textMuted, marginTop: spacing.xs, lineHeight: 21 },
   preview: { color: colors.text, marginTop: spacing.sm },

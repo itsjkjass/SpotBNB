@@ -135,10 +135,10 @@ export default function CreateListingScreen({ navigation, route }: Props) {
       {loading ? <Text style={styles.error}>{error || "Loading your listing…"}</Text> : <>
       <Text style={styles.draftNotice}>Publish your space to receive bookings. Set up payouts later, before withdrawing your earnings. You can hide your listing at any time in My Listings.</Text>
       <Text style={styles.label}>Title</Text>
-      <TextInput style={styles.input} value={title} onChangeText={setTitle} placeholder="Driveway near BMO Field" />
+      <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light" style={styles.input} value={title} onChangeText={setTitle} placeholder="Driveway near BMO Field" />
 
       <Text style={styles.label}>Description</Text>
-      <TextInput
+      <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light"
         style={[styles.input, styles.multiline]}
         value={description}
         onChangeText={setDescription}
@@ -147,10 +147,10 @@ export default function CreateListingScreen({ navigation, route }: Props) {
       />
 
       <Text style={styles.label}>Address</Text>
-      <TextInput style={styles.input} value={address} onChangeText={setAddress} placeholder="123 Main St, Toronto, ON" />
+      <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light" style={styles.input} value={address} onChangeText={setAddress} placeholder="123 Main St, Toronto, ON" />
 
       <Text style={styles.label}>Price per calendar day (CAD)</Text>
-      <TextInput
+      <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light"
         style={styles.input}
         value={pricePerDay}
         onChangeText={setPricePerDay}
@@ -221,6 +221,7 @@ const styles = StyleSheet.create({
   draftNotice: { color: colors.textMuted, lineHeight: 21, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.sm },
   label: { fontSize: 14, fontWeight: "600", color: colors.text, marginTop: spacing.md },
   input: {
+    color: colors.text,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.sm,

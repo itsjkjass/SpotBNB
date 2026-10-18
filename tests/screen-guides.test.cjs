@@ -83,7 +83,8 @@ test('replay survives a focus change while loading; stale reads cannot open an o
     'react-native': { StyleSheet: { create: value => value } },
     '@react-navigation/native': { useIsFocused: () => focused, useFocusEffect: effect => { focusEffect = effect; } },
     'react-native-safe-area-context': {},
-    '../constants/theme': { colors: {}, radius: {}, spacing: {} },
+    '../constants/theme': { colors: {}, radius: {}, spacing: {}, depth: {} },
+    './GuideBackdrop': {},
     './ui': { ui: {} }, '../utils/guideLayout': {},
     '../services/guideProgress': {
       shouldShowGuide: (flow, manual) => new Promise(resolve => reads.push({ flow, manual, resolve })),

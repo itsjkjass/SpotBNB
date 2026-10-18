@@ -176,7 +176,7 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
               </TouchableOpacity>
             ))}
           </View>
-          <TextInput
+          <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light"
             style={styles.input}
             placeholder="How was this parking spot?"
             value={comment}
@@ -232,6 +232,7 @@ const styles = StyleSheet.create({
   star: { fontSize: 32, color: colors.border },
   starActive: { color: colors.accent },
   input: {
+    color: colors.text,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.sm,

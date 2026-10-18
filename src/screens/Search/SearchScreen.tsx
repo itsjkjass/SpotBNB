@@ -7,7 +7,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { getActiveSpots } from "../../services/spots";
 import { ParkingSpot, VehicleSize } from "../../types/models";
-import { colors, spacing, radius } from "../../constants/theme";
+import { colors, depth, spacing, radius } from "../../constants/theme";
 import type { SearchStackParamList } from "../../navigation/types";
 import { dateInZone, DEFAULT_PARKING_TIME_ZONE, pickerDate, pickerDateString, supportsDailyBooking } from "../../utils/calendarDays";
 import BookingDateTimePicker from "../../components/BookingDateTimePicker";
@@ -111,7 +111,7 @@ export default function SearchScreen({ navigation }: Props) {
       </View>}
       {locationError ? <Text accessibilityRole="alert" style={styles.error}>{locationError}</Text> : null}
     </ScrollView>
-    <View style={styles.results}>
+    <View style={[styles.results, !listMode && styles.mapFrame]}><View style={styles.resultsClip}>
       {listMode ? <FlatList data={nearby} keyExtractor={item => item.id} contentContainerStyle={styles.list}
         refreshing={loading} onRefresh={retry}
         ListHeaderComponent={<Text style={styles.resultsLabel}>{nearby.length} {nearby.length === 1 ? "space" : "spaces"} in this area</Text>}
@@ -136,16 +136,17 @@ export default function SearchScreen({ navigation }: Props) {
       </>}
       <View ref={guideSecondTarget} collapsable={false} style={styles.switcher}><Choice icon={listMode ? "map-outline" : "list-outline"} label={listMode ? "Map" : "List"} selected onPress={() => setListMode(!listMode)} /></View>
     </View>
+    </View>
     {guideOverlay}
   </View>;
 }
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background }, topScroll: { flexGrow: 0, maxHeight: "60%" }, top: { padding: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md, gap: 10 },
-  search: { flexDirection: "row", alignItems: "center", backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingLeft: spacing.md },
+  search: { ...depth.soft, flexDirection: "row", alignItems: "center", backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingLeft: spacing.md },
   input: { flex: 1, minHeight: 54, fontSize: 16, color: colors.text, paddingHorizontal: 10 }, iconButton: { minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" },
   choices: { gap: 8 }, dates: { gap: 4, padding: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md },
   note: { color: colors.textMuted, fontSize: 14, lineHeight: 20 }, error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
-  results: { flex: 1, minHeight: 180 }, list: { padding: spacing.lg, paddingBottom: 80 }, resultsLabel: { ...ui.label, marginBottom: spacing.md },
+  results: { flex: 1, minHeight: 180 }, mapFrame: { ...depth.raised, marginHorizontal: spacing.md, marginBottom: spacing.md, borderRadius: radius.lg, backgroundColor: colors.primarySoft }, resultsClip: { flex: 1, borderRadius: radius.lg, overflow: "hidden" }, list: { padding: spacing.lg, paddingBottom: 80 }, resultsLabel: { ...ui.label, marginBottom: spacing.md },
   mapTools: { position: "absolute", top: 16, left: 20, flexDirection: "row", gap: 12, alignItems: "center" },
   marker: { backgroundColor: colors.paper, borderRadius: 20, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 8 },
   markerSelected: { backgroundColor: colors.primary, borderColor: colors.primary }, markerText: { color: colors.text, fontSize: 14, fontWeight: "700" },

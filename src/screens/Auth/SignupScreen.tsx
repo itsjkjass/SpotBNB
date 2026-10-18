@@ -51,8 +51,8 @@ export default function SignupScreen({ navigation }: Props) {
     >
       <Text style={styles.title}>Create your account</Text>
 
-      <TextInput style={styles.input} placeholder="Full name" value={name} onChangeText={setName} />
-      <TextInput
+      <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light" style={styles.input} placeholder="Full name" value={name} onChangeText={setName} />
+      <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light"
         style={styles.input}
         placeholder="Email"
         autoCapitalize="none"
@@ -60,7 +60,7 @@ export default function SignupScreen({ navigation }: Props) {
         value={email}
         onChangeText={setEmail}
       />
-      <TextInput
+      <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light"
         style={styles.input}
         placeholder="Password (min. 6 characters)"
         secureTextEntry
@@ -97,6 +97,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   input: {
+    color: colors.text,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.sm,

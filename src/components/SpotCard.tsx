@@ -1,7 +1,7 @@
 import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { ParkingSpot } from "../types/models";
-import { colors, radius, spacing } from "../constants/theme";
+import { colors, depth, radius, spacing } from "../constants/theme";
 import { Icon } from "./ui";
 
 export default function SpotCard({ spot, onPress, compact = false }: { spot: ParkingSpot; onPress: () => void; compact?: boolean }) {
@@ -19,7 +19,7 @@ export default function SpotCard({ spot, onPress, compact = false }: { spot: Par
   </Pressable>;
 }
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.paper, borderRadius: radius.lg, overflow: "hidden", marginBottom: spacing.md },
+  card: { ...depth.soft, backgroundColor: colors.paper, borderRadius: radius.lg, overflow: "hidden", marginBottom: spacing.md },
   compact: { flexDirection: "row", alignItems: "center", marginBottom: 0 },
   photo: { width: "100%", aspectRatio: 1.8, backgroundColor: colors.primarySoft }, thumb: { width: 94, height: 112, aspectRatio: undefined, marginLeft: 12, borderRadius: radius.md },
   placeholder: { justifyContent: "center", alignItems: "center" }, content: { flex: 1, padding: spacing.md, gap: 6 },

@@ -4,8 +4,9 @@ import { useFocusEffect, useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { finishGuide, GuideFlow, shouldShowGuide } from "../services/guideProgress";
 import { guideLayout, GuideRect } from "../utils/guideLayout";
-import { colors, radius, spacing } from "../constants/theme";
+import { colors, depth, radius, spacing } from "../constants/theme";
 import { Action, ui } from "./ui";
+import { GuideBackdrop, GuideBackdropProvider } from "./GuideBackdrop";
 
 type Step = { title: string; body: string };
 const STEPS: Record<GuideFlow, Step[]> = {
@@ -30,7 +31,7 @@ export function GuideProvider({ children }: { children: React.ReactNode }) {
   const [request, setRequest] = useState<Request>(null);
   const replay = useCallback((flow: GuideFlow) => setRequest(previous => ({ flow, id: (previous?.id ?? 0) + 1 })), []);
   const value = useMemo(() => ({ request, replay }), [request, replay]);
-  return <GuideContext.Provider value={value}>{children}</GuideContext.Provider>;
+  return <GuideContext.Provider value={value}><GuideBackdropProvider>{children}</GuideBackdropProvider></GuideContext.Provider>;
 }
 export function useGuideReplay() { return useContext(GuideContext).replay; }
 
@@ -80,15 +81,11 @@ function GuideOverlay({ step, steps, target, onClose, onStep }: {
   return <Modal transparent statusBarTranslucent navigationBarTranslucent presentationStyle="overFullScreen" animationType="none" onRequestClose={onClose}>
     <View style={styles.screen} accessibilityViewIsModal>
       <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
-        {hole ? <>
-          <View style={[styles.shade, { top: 0, left: 0, right: 0, height: hole.y }]} />
-          <View style={[styles.shade, { top: hole.y + hole.height, left: 0, right: 0, bottom: 0 }]} />
-          <View style={[styles.shade, { top: hole.y, left: 0, width: hole.x, height: hole.height }]} />
-          <View style={[styles.shade, { top: hole.y, left: hole.x + hole.width, right: 0, height: hole.height }]} />
-          <View style={[styles.ring, { top: hole.y, left: hole.x, width: hole.width, height: hole.height }]} />
-        </> : <View style={[styles.shade, StyleSheet.absoluteFill]} />}
+        <GuideBackdrop hole={hole} width={width} height={height} />
+        {hole && <View style={[styles.ring, { top: hole.y, left: hole.x, width: hole.width, height: hole.height }]} />}
       </View>
-      <ScrollView style={[styles.card, { top: layout.cardTop, maxHeight: layout.cardMaxHeight }]} contentContainerStyle={styles.content}>
+      <View style={[styles.card, { top: layout.cardTop, maxHeight: layout.cardMaxHeight }]}>
+      <ScrollView style={styles.cardClip} contentContainerStyle={styles.content}>
         <View style={styles.toolbar}><Text style={ui.label}>Quick guide · {step + 1} of {steps.length}</Text>
           <TouchableOpacity accessibilityRole="button" onPress={onClose} style={styles.skip}><Text style={styles.link}>Skip</Text></TouchableOpacity></View>
         <Text accessibilityRole="header" accessibilityLiveRegion="polite" style={ui.subheading}>{steps[step].title}</Text>
@@ -96,13 +93,15 @@ function GuideOverlay({ step, steps, target, onClose, onStep }: {
         <Action label={step === steps.length - 1 ? "Got it" : "Next"} onPress={() => step === steps.length - 1 ? onClose() : onStep(step + 1)} />
         {step > 0 && <TouchableOpacity accessibilityRole="button" style={styles.back} onPress={() => onStep(step - 1)}><Text style={styles.link}>Back</Text></TouchableOpacity>}
       </ScrollView>
+      </View>
     </View>
   </Modal>;
 }
 const styles = StyleSheet.create({
-  screen: { flex: 1 }, shade: { position: "absolute", backgroundColor: "rgba(16,30,23,0.65)" },
-  ring: { position: "absolute", borderColor: colors.paper, borderWidth: 3, borderRadius: radius.md },
-  card: { position: "absolute", left: 16, right: 16, backgroundColor: colors.paper, borderRadius: radius.lg },
+  screen: { flex: 1 },
+  ring: { position: "absolute", borderColor: "#D9F5E5", borderWidth: 2, borderRadius: 20, boxShadow: "0px 0px 20px rgba(141, 229, 179, 0.4)" },
+  card: { ...depth.floating, position: "absolute", left: 16, right: 16, backgroundColor: colors.paper, borderRadius: radius.lg },
+  cardClip: { borderRadius: radius.lg },
   content: { padding: spacing.lg, gap: spacing.md }, toolbar: { ...ui.row, flexWrap: "wrap", justifyContent: "space-between" },
   skip: { minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "center" }, link: { color: colors.primary, fontWeight: "600", fontSize: 16 },
   back: { alignItems: "center", padding: spacing.sm },

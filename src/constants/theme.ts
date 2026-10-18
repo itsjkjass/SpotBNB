@@ -26,3 +26,10 @@ export const radius = {
   md: 16,
   lg: 24,
 };
+
+// Restrained green light keeps raised surfaces consistent across both platforms.
+export const depth = {
+  soft: { boxShadow: "0px 5px 20px rgba(11, 110, 79, 0.10)" },
+  raised: { boxShadow: "0px 8px 28px rgba(11, 110, 79, 0.16)" },
+  floating: { boxShadow: "0px 12px 36px rgba(3, 43, 29, 0.28)" },
+};

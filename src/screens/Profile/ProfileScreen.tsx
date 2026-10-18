@@ -4,7 +4,7 @@ import { ScrollView, Text, StyleSheet, TouchableOpacity, View, Alert } from "rea
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../../hooks/useAuth";
 import { logOut } from "../../services/auth";
-import { colors, spacing, radius } from "../../constants/theme";
+import { colors, depth, spacing, radius } from "../../constants/theme";
 import type { ProfileStackParamList, RootStackParamList } from "../../navigation/types";
 import DocumentBadge from "../../components/DocumentBadge";
 import { Action, Icon, IconName, ui } from "../../components/ui";
@@ -49,7 +49,7 @@ export default function ProfileScreen({ navigation }: Props) {
 }
 const styles = StyleSheet.create({
   container: { flexGrow: 1, padding: spacing.lg, backgroundColor: colors.background },
-  identity: { gap: spacing.sm }, avatar: { width: 64, height: 64, borderRadius: 24, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center", marginBottom: spacing.sm },
+  identity: { gap: spacing.sm }, avatar: { ...depth.soft, width: 64, height: 64, borderRadius: 24, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center", marginBottom: spacing.sm },
   initial: { fontSize: 28, fontWeight: "600", color: colors.primary }, badges: { marginTop: spacing.md },
   section: { ...ui.subheading, marginTop: spacing.xl, marginBottom: spacing.sm },
   row: { ...ui.row, gap: spacing.md, paddingVertical: 18, borderBottomWidth: 1, borderColor: colors.border },

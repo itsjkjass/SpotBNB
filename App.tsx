@@ -16,7 +16,7 @@ export default function App() {
     >
       <AuthProvider>
         <RootNavigator />
-        <StatusBar style="auto" />
+        <StatusBar style="dark" />
       </AuthProvider>
     </StripeProvider>
   );

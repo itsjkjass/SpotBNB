@@ -46,7 +46,7 @@ export default function LoginScreen({ navigation }: Props) {
       <Text style={styles.title}>SpotBnB</Text>
       <Text style={styles.subtitle}>Find and book parking spots near you</Text>
 
-      <TextInput
+      <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light"
         style={styles.input}
         placeholder="Email"
         autoCapitalize="none"
@@ -54,7 +54,7 @@ export default function LoginScreen({ navigation }: Props) {
         value={email}
         onChangeText={setEmail}
       />
-      <TextInput
+      <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light"
         style={styles.input}
         placeholder="Password"
         secureTextEntry
@@ -96,6 +96,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   input: {
+    color: colors.text,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.sm,

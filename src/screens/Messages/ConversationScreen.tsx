@@ -122,7 +122,7 @@ function BookingConversation({ bookingId }: { bookingId: string }) {
         <Text style={styles.messageText}>{item.text}</Text><Text style={styles.time}>{new Date(item.createdAt).toLocaleString()}</Text>
       </TouchableOpacity>} />
     {!canSend && <Text style={styles.notice}>{blocked ? "Messaging is blocked for this booking." : booking?.status === "cancelled" ? "This booking was cancelled. You can still read past messages." : "Messaging becomes available when your booking is confirmed."}</Text>}
-    <View style={styles.composer}><TextInput accessibilityLabel="Message" value={text} onChangeText={setText} maxLength={2000} multiline editable={!!canSend && !sending} placeholder="Write a message…" style={styles.input} />
+    <View style={styles.composer}><TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light" accessibilityLabel="Message" value={text} onChangeText={setText} maxLength={2000} multiline editable={!!canSend && !sending} placeholder="Write a message…" style={styles.input} />
       <TouchableOpacity accessibilityRole="button" accessibilityLabel="Send message" disabled={!canSend || !text.trim() || sending} onPress={send} style={[styles.send, (!canSend || !text.trim() || sending) && { opacity: 0.5 }]}>
         {sending ? <ActivityIndicator color="white" /> : <Text style={styles.sendText}>Send</Text>}
       </TouchableOpacity></View>

@@ -1,7 +1,7 @@
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { colors, radius, spacing } from "../constants/theme";
+import { colors, depth, radius, spacing } from "../constants/theme";
 
 export type IconName = React.ComponentProps<typeof Ionicons>["name"];
 export function Icon({ name, size = 22, color = colors.text }: { name: IconName; size?: number; color?: string }) {
@@ -41,11 +41,11 @@ export const ui = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
 });
 const styles = StyleSheet.create({
-  action: { minHeight: 52, borderRadius: radius.md, backgroundColor: colors.primary, justifyContent: "center", alignItems: "center", padding: spacing.md },
+  action: { ...depth.soft, minHeight: 52, borderRadius: radius.md, backgroundColor: colors.primary, justifyContent: "center", alignItems: "center", padding: spacing.md },
   secondary: { backgroundColor: colors.primarySoft }, actionText: { color: colors.paper, fontSize: 16, fontWeight: "600" },
   disabled: { opacity: 0.5 }, pressed: { opacity: 0.75 },
   choice: { minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 16, borderRadius: 24, backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border },
   choiceSelected: { backgroundColor: colors.primary, borderColor: colors.primary }, choiceText: { fontSize: 14, fontWeight: "500", color: colors.text },
-  empty: { padding: spacing.lg, alignItems: "center", gap: spacing.md }, emptyIcon: { padding: spacing.md, backgroundColor: colors.primarySoft, borderRadius: radius.lg },
+  empty: { padding: spacing.lg, alignItems: "center", gap: spacing.md }, emptyIcon: { ...depth.soft, padding: spacing.md, backgroundColor: colors.primarySoft, borderRadius: radius.lg },
   emptyTitle: { color: colors.text, fontSize: 22, fontWeight: "600", textAlign: "center" }, body: { ...ui.body, textAlign: "center" },
 });
