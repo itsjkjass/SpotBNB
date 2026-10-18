@@ -5,6 +5,8 @@ import { StripeProvider } from "@stripe/stripe-react-native";
 import { AuthProvider } from "./src/hooks/useAuth";
 import RootNavigator from "./src/navigation/RootNavigator";
 
+import { MotionProvider } from "./src/components/Motion";
+
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
 
 export default function App() {
@@ -15,7 +17,7 @@ export default function App() {
       urlScheme="spotbnb"
     >
       <AuthProvider>
-        <RootNavigator />
+        <MotionProvider><RootNavigator /></MotionProvider>
         <StatusBar style="dark" />
       </AuthProvider>
     </StripeProvider>

@@ -1,11 +1,12 @@
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { ParkingSpot } from "../types/models";
 import { colors, depth, radius, spacing } from "../constants/theme";
+import { MotionPressable } from "./Motion";
 import { Icon } from "./ui";
 
 export default function SpotCard({ spot, onPress, compact = false }: { spot: ParkingSpot; onPress: () => void; compact?: boolean }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => [styles.card, compact && styles.compact, pressed && { opacity: 0.8 }]}>
+  return <MotionPressable accessibilityRole="button" onPress={onPress} style={[styles.card, compact && styles.compact]}>
     {spot.photoUrls[0] ? <Image accessibilityLabel={spot.title} source={{ uri: spot.photoUrls[0] }} style={[styles.photo, compact && styles.thumb]} /> :
       <View style={[styles.photo, styles.placeholder, compact && styles.thumb]}><Icon name="car-outline" size={32} color={colors.primary} /></View>}
     <View style={styles.content}>
@@ -16,7 +17,7 @@ export default function SpotCard({ spot, onPress, compact = false }: { spot: Par
         {spot.reviewCount > 0 && <Text style={styles.rating}>★ {spot.averageRating.toFixed(1)}</Text>}
       </View>
     </View>
-  </Pressable>;
+  </MotionPressable>;
 }
 const styles = StyleSheet.create({
   card: { ...depth.soft, backgroundColor: colors.paper, borderRadius: radius.lg, overflow: "hidden", marginBottom: spacing.md },

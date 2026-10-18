@@ -4,9 +4,12 @@ import MessagesScreen from "../screens/Messages/MessagesScreen";
 import ConversationScreen from "../screens/Messages/ConversationScreen";
 import type { MessagesStackParamList } from "./types";
 import { colors } from "../constants/theme";
+import { useReducedMotion } from "../components/Motion";
+
 const Stack = createNativeStackNavigator<MessagesStackParamList>();
 export default function MessagesStack() {
-  return <Stack.Navigator screenOptions={{ headerTintColor: colors.primary, headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false, headerTitleStyle: { fontSize: 18, fontWeight: "600" }, contentStyle: { backgroundColor: colors.background } }}>
+  const reducedMotion = useReducedMotion();
+  return <Stack.Navigator screenOptions={{ animation: reducedMotion ? "none" : "slide_from_right", headerTintColor: colors.primary, headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false, headerTitleStyle: { fontSize: 18, fontWeight: "600" }, contentStyle: { backgroundColor: colors.background } }}>
     <Stack.Screen name="Inbox" component={MessagesScreen} options={{ title: "Messages" }} />
     <Stack.Screen name="Conversation" component={ConversationScreen} options={{ title: "Booking messages" }} />
   </Stack.Navigator>;

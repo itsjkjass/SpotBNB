@@ -1,10 +1,10 @@
+import { MotionPressable } from "../../components/Motion";
 import { displayCalendarDate } from "../../utils/calendarDays";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
   TextInput,
   Alert,
@@ -146,18 +146,18 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
 
       {booking.status === "pending_payment" && <View style={styles.paymentNotice}>
         <Text style={ui.body}>Payment is not confirmed yet. If you just paid, refresh the status before trying another reservation. Unpaid reservations are released automatically.</Text>
-        <TouchableOpacity accessibilityRole="button" style={styles.button} onPress={() => setAttempt(n => n + 1)}><Text style={styles.buttonText}>Refresh payment status</Text></TouchableOpacity>
+        <MotionPressable accessibilityRole="button" style={styles.button} onPress={() => setAttempt(n => n + 1)}><Text style={styles.buttonText}>Refresh payment status</Text></MotionPressable>
       </View>}
       {canCancel && (
-        <TouchableOpacity style={styles.dangerButton} onPress={handleCancel} disabled={busy}>
+        <MotionPressable style={styles.dangerButton} onPress={handleCancel} disabled={busy}>
           {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Cancel Booking</Text>}
-        </TouchableOpacity>
+        </MotionPressable>
       )}
 
       {booking.status !== "pending_payment" && (
-        <TouchableOpacity style={styles.button} onPress={() => navigation.getParent<BottomTabNavigationProp<MainTabsParamList>>()?.navigate("MessagesTab", { screen: "Conversation", params: { bookingId } })}>
+        <MotionPressable style={styles.button} onPress={() => navigation.getParent<BottomTabNavigationProp<MainTabsParamList>>()?.navigate("MessagesTab", { screen: "Conversation", params: { bookingId } })}>
           <Text style={styles.buttonText}>{booking.status === "cancelled" ? "View booking messages" : `Message ${isBuyer ? "seller" : "buyer"}`}</Text>
-        </TouchableOpacity>
+        </MotionPressable>
       )}
 
       {canReview && (
@@ -165,7 +165,7 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
           <Text style={styles.sectionTitle}>Leave a review</Text>
           <View style={styles.starRow}>
             {[1, 2, 3, 4, 5].map((n) => (
-              <TouchableOpacity
+              <MotionPressable
                 key={n}
                 accessibilityRole="radio"
                 accessibilityLabel={`${n} stars`}
@@ -173,7 +173,7 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
                 onPress={() => setRating(n)}
               >
                 <Text style={[styles.star, n <= rating && styles.starActive]}>★</Text>
-              </TouchableOpacity>
+              </MotionPressable>
             ))}
           </View>
           <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light"
@@ -183,9 +183,9 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
             onChangeText={setComment}
             multiline
           />
-          <TouchableOpacity style={styles.button} onPress={handleSubmitReview} disabled={busy}>
+          <MotionPressable style={styles.button} onPress={handleSubmitReview} disabled={busy}>
             {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Submit Review</Text>}
-          </TouchableOpacity>
+          </MotionPressable>
         </View>
       )}
 

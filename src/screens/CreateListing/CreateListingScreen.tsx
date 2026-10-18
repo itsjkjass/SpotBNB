@@ -1,3 +1,4 @@
+import { MotionPressable } from "../../components/Motion";
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -5,7 +6,6 @@ import {
   TextInput,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Image,
   ActivityIndicator,
   Alert,
@@ -160,30 +160,30 @@ export default function CreateListingScreen({ navigation, route }: Props) {
       <Text style={styles.draftNotice}>One price for each selected calendar date, in your space&apos;s local time zone. No hourly charges.</Text>
       {original?.availability.type === "recurring_hours" && <View>
         <Text style={styles.error}>This listing has restricted hours. Full calendar-day bookings require access throughout each booked date.</Text>
-        <TouchableOpacity onPress={() => setOriginal({ ...original, availability: { type: "always" } })}>
+        <MotionPressable onPress={() => setOriginal({ ...original, availability: { type: "always" } })}>
           <Text style={styles.label}>Confirm this space is available all day</Text>
-        </TouchableOpacity>
+        </MotionPressable>
       </View>}
       <Text style={styles.label}>Parking space time zone</Text>
-      <View style={styles.chipRow}>{PARKING_TIME_ZONES.map(([zone, label]) => <TouchableOpacity key={zone} onPress={() => setTimeZone(zone)} style={[styles.chip, timeZone === zone && styles.chipSelected]}><Text style={[styles.chipText, timeZone === zone && styles.chipTextSelected]}>{label}</Text></TouchableOpacity>)}</View>
+      <View style={styles.chipRow}>{PARKING_TIME_ZONES.map(([zone, label]) => <MotionPressable key={zone} onPress={() => setTimeZone(zone)} style={[styles.chip, timeZone === zone && styles.chipSelected]}><Text style={[styles.chipText, timeZone === zone && styles.chipTextSelected]}>{label}</Text></MotionPressable>)}</View>
 
       <Text style={styles.label}>Spot type</Text>
       <View style={styles.chipRow}>
         {SPOT_TYPES.map((type) => (
-          <TouchableOpacity
+          <MotionPressable
             key={type}
             style={[styles.chip, spotType === type && styles.chipSelected]}
             onPress={() => setSpotType(type)}
           >
             <Text style={[styles.chipText, spotType === type && styles.chipTextSelected]}>{type}</Text>
-          </TouchableOpacity>
+          </MotionPressable>
         ))}
       </View>
 
       <Text style={styles.label}>Vehicle sizes accepted</Text>
       <View style={styles.chipRow}>
         {VEHICLE_SIZES.map((size) => (
-          <TouchableOpacity
+          <MotionPressable
             key={size}
             style={[styles.chip, vehicleSizes.includes(size) && styles.chipSelected]}
             onPress={() => toggleVehicleSize(size)}
@@ -191,7 +191,7 @@ export default function CreateListingScreen({ navigation, route }: Props) {
             <Text style={[styles.chipText, vehicleSizes.includes(size) && styles.chipTextSelected]}>
               {size}
             </Text>
-          </TouchableOpacity>
+          </MotionPressable>
         ))}
       </View>
 
@@ -200,16 +200,16 @@ export default function CreateListingScreen({ navigation, route }: Props) {
         {photos.map((uri) => (
           <Image key={uri} source={{ uri }} style={styles.photoThumb} />
         ))}
-        <TouchableOpacity style={styles.addPhoto} onPress={pickPhoto}>
+        <MotionPressable style={styles.addPhoto} onPress={pickPhoto}>
           <Text style={{ fontSize: 24, color: colors.primary }}>+</Text>
-        </TouchableOpacity>
+        </MotionPressable>
       </View>
 
       {error && <Text style={styles.error}>{error}</Text>}
 
-      <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={submitting}>
+      <MotionPressable style={styles.button} onPress={handleSubmit} disabled={submitting}>
         {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>{route.params?.spotId ? "Save changes" : "Publish listing"}</Text>}
-      </TouchableOpacity>
+      </MotionPressable>
       </>}
     </ScrollView>
   );

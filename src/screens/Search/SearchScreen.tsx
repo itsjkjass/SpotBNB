@@ -1,3 +1,4 @@
+import { Reveal } from "../../components/Motion";
 import { useScreenGuide } from "../../components/ScreenGuide";
 import React, { useState, useCallback } from "react";
 import { View, Text, TextInput, StyleSheet, ActivityIndicator, Pressable, FlatList, ScrollView, Keyboard, Platform } from "react-native";
@@ -99,7 +100,7 @@ export default function SearchScreen({ navigation }: Props) {
         <Choice label="Garage" selected={garage} onPress={() => setGarage(!garage)} />
         <Choice label="SUV / truck" selected={vehicle === "suv_truck"} onPress={() => setVehicle(vehicle ? null : "suv_truck")} />
       </ScrollView>
-      {datesOpen && <View style={styles.dates}>
+      {datesOpen && <Reveal style={styles.dates}>
         <Text style={ui.label}>First date</Text>
         <BookingDateTimePicker value={pickerDate(startDate)} minimumDate={pickerDate(today)} onChange={date => {
           const value = pickerDateString(date); setStartDate(value); if (endDate < value) setEndDate(value); setDatesChosen(true);
@@ -108,7 +109,7 @@ export default function SearchScreen({ navigation }: Props) {
         <BookingDateTimePicker value={pickerDate(endDate)} minimumDate={pickerDate(startDate)} onChange={date => { setEndDate(pickerDateString(date)); setDatesChosen(true); }} />
         <Text style={styles.note}>Availability is confirmed at checkout in the space’s time zone.</Text>
         <Choice label="Use these dates" onPress={() => { setDatesChosen(true); setDatesOpen(false); }} />
-      </View>}
+      </Reveal>}
       {locationError ? <Text accessibilityRole="alert" style={styles.error}>{locationError}</Text> : null}
     </ScrollView>
     <View style={[styles.results, !listMode && styles.mapFrame]}><View style={styles.resultsClip}>
@@ -128,7 +129,7 @@ export default function SearchScreen({ navigation }: Props) {
           <Choice icon="locate-outline" label="Near me" onPress={() => findDestination(true)} />
           {loading && <ActivityIndicator color={colors.primary} />}
         </View>
-        {selected && !error && <View style={styles.preview}><SpotCard compact spot={selected} onPress={() => openSpot(selected)} /></View>}
+        {selected && !error && <Reveal key={selected.id} style={styles.preview}><SpotCard compact spot={selected} onPress={() => openSpot(selected)} /></Reveal>}
         {(error || (!loading && nearby.length === 0)) && <View style={styles.banner}>
           <Text style={styles.note}>{error || "No spaces in this area. Move the map or clear your filters."}</Text>
           {error && <Choice label="Try again" onPress={retry} />}

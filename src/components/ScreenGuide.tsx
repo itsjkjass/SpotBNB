@@ -8,6 +8,8 @@ import { colors, depth, radius, spacing } from "../constants/theme";
 import { Action, ui } from "./ui";
 import { GuideBackdrop, GuideBackdropProvider } from "./GuideBackdrop";
 
+import { Reveal, useReducedMotion } from "./Motion";
+
 type Step = { title: string; body: string };
 const STEPS: Record<GuideFlow, Step[]> = {
   explore: [
@@ -64,6 +66,7 @@ export function useScreenGuide(flow: GuideFlow, ready = true) {
 function GuideOverlay({ step, steps, target, onClose, onStep }: {
   step: number; steps: Step[]; target: React.RefObject<View | null>; onClose: () => void; onStep: (step: number) => void;
 }) {
+  const reducedMotion = useReducedMotion();
   const { width, height, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [rect, setRect] = useState<GuideRect | null | undefined>(undefined);
@@ -78,13 +81,13 @@ function GuideOverlay({ step, steps, target, onClose, onStep }: {
   if (rect === undefined) return null;
   const layout = guideLayout(rect, width, height, insets.top, insets.bottom);
   const hole = layout.hole;
-  return <Modal transparent statusBarTranslucent navigationBarTranslucent presentationStyle="overFullScreen" animationType="none" onRequestClose={onClose}>
+  return <Modal transparent statusBarTranslucent navigationBarTranslucent presentationStyle="overFullScreen" animationType={reducedMotion ? "none" : "fade"} onRequestClose={onClose}>
     <View style={styles.screen} accessibilityViewIsModal>
       <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
         <GuideBackdrop hole={hole} width={width} height={height} />
         {hole && <View style={[styles.ring, { top: hole.y, left: hole.x, width: hole.width, height: hole.height }]} />}
       </View>
-      <View style={[styles.card, { top: layout.cardTop, maxHeight: layout.cardMaxHeight }]}>
+      <Reveal style={[styles.card, { top: layout.cardTop, maxHeight: layout.cardMaxHeight }]}>
       <ScrollView style={styles.cardClip} contentContainerStyle={styles.content}>
         <View style={styles.toolbar}><Text style={ui.label}>Quick guide · {step + 1} of {steps.length}</Text>
           <TouchableOpacity accessibilityRole="button" onPress={onClose} style={styles.skip}><Text style={styles.link}>Skip</Text></TouchableOpacity></View>
@@ -93,7 +96,7 @@ function GuideOverlay({ step, steps, target, onClose, onStep }: {
         <Action label={step === steps.length - 1 ? "Got it" : "Next"} onPress={() => step === steps.length - 1 ? onClose() : onStep(step + 1)} />
         {step > 0 && <TouchableOpacity accessibilityRole="button" style={styles.back} onPress={() => onStep(step - 1)}><Text style={styles.link}>Back</Text></TouchableOpacity>}
       </ScrollView>
-      </View>
+      </Reveal>
     </View>
   </Modal>;
 }

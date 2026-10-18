@@ -1,8 +1,8 @@
+import { MotionPressable } from "../../components/Motion";
 import React, { useState } from "react";
 import {
   Text,
   TextInput,
-  TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -64,13 +64,13 @@ export default function LoginScreen({ navigation }: Props) {
 
       {error && <Text style={styles.error}>{error}</Text>}
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+      <MotionPressable style={styles.button} onPress={handleLogin} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Log In</Text>}
-      </TouchableOpacity>
+      </MotionPressable>
 
-      <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
+      <MotionPressable onPress={() => navigation.navigate("Signup")}>
         <Text style={styles.link}>Don&apos;t have an account? Sign up</Text>
-      </TouchableOpacity>
+      </MotionPressable>
     </KeyboardAvoidingView>
   );
 }

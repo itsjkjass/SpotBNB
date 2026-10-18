@@ -8,11 +8,14 @@ export type AuthStackParamList = {
   Signup: undefined;
 };
 
+import { useReducedMotion } from "../components/Motion";
+
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 export default function AuthStack() {
+  const reducedMotion = useReducedMotion();
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ animation: reducedMotion ? "none" : "slide_from_right", headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Signup" component={SignupScreen} />
     </Stack.Navigator>

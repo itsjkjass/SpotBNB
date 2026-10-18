@@ -6,11 +6,14 @@ import SellerOnboardingScreen from "../screens/Profile/SellerOnboardingScreen";
 import type { MyListingsStackParamList } from "./types";
 import { colors } from "../constants/theme";
 
+import { useReducedMotion } from "../components/Motion";
+
 const Stack = createNativeStackNavigator<MyListingsStackParamList>();
 
 export default function MyListingsStack() {
+  const reducedMotion = useReducedMotion();
   return (
-    <Stack.Navigator screenOptions={{ headerTintColor: colors.primary, headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false, headerTitleStyle: { fontSize: 18, fontWeight: "600" }, contentStyle: { backgroundColor: colors.background } }}>
+    <Stack.Navigator screenOptions={{ animation: reducedMotion ? "none" : "slide_from_right", headerTintColor: colors.primary, headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false, headerTitleStyle: { fontSize: 18, fontWeight: "600" }, contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="MyListings" component={MyListingsScreen} options={{ title: "Host" }} />
       <Stack.Screen name="SellerOnboarding" component={SellerOnboardingScreen} options={{ title: "Seller Payouts" }} />
       <Stack.Screen

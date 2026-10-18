@@ -1,13 +1,15 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Icon, IconName } from "../components/ui";
+import { IconName } from "../components/ui";
 import SearchStack from "./SearchStack";
 import MyListingsStack from "./MyListingsStack";
 import BookingsStack from "./BookingsStack";
 import ProfileStack from "./ProfileStack";
 import MessagesStack from "./MessagesStack";
 import type { MainTabsParamList } from "./types";
-import { colors } from "../constants/theme";
+import TabIcon from "../components/TabIcon";
+import { useReducedMotion } from "../components/Motion";
+import { colors, depth } from "../constants/theme";
 import RequireAccount from "../components/RequireAccount";
 
 const Tab = createBottomTabNavigator<MainTabsParamList>();
@@ -34,15 +36,17 @@ const TAB_ICONS: Record<keyof MainTabsParamList, IconName> = {
 };
 
 export default function MainTabs() {
+  const reducedMotion = useReducedMotion();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
+        animation: reducedMotion ? "none" : "fade",
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: { backgroundColor: colors.paper, borderTopColor: colors.border },
+        tabBarStyle: { ...depth.raised, backgroundColor: colors.paper, borderTopWidth: 0, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 6 },
         tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
-        tabBarIcon: ({ color, size }) => <Icon name={TAB_ICONS[route.name]} size={size} color={color} />,
+        tabBarIcon: ({ color, size, focused }) => <TabIcon name={TAB_ICONS[route.name]} size={size} color={color} focused={focused} />,
       })}
     >
       <Tab.Screen name="SearchTab" component={SearchStack} options={{ title: "Explore" }} />

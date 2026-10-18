@@ -1,6 +1,7 @@
+import { MotionPressable } from "../../components/Motion";
 import { useScreenGuide } from "../../components/ScreenGuide";
 import React, { useState } from "react";
-import { ScrollView, Text, StyleSheet, TouchableOpacity, View, Alert } from "react-native";
+import { ScrollView, Text, StyleSheet, View, Alert } from "react-native";
 import type { NativeStackNavigationProp, NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../../hooks/useAuth";
 import { logOut } from "../../services/auth";
@@ -11,11 +12,11 @@ import { Action, Icon, IconName, ui } from "../../components/ui";
 
 type Props = NativeStackScreenProps<ProfileStackParamList, "Profile">;
 function AccountRow({ title, detail, icon, onPress }: { title: string; detail: string; icon: IconName; onPress: () => void }) {
-  return <TouchableOpacity accessibilityRole="button" style={styles.row} onPress={onPress}>
+  return <MotionPressable accessibilityRole="button" style={styles.row} onPress={onPress}>
     <View style={styles.icon}><Icon name={icon} color={colors.primary} /></View>
     <View style={{ flex: 1 }}><Text style={styles.rowTitle}>{title}</Text><Text style={styles.detail}>{detail}</Text></View>
     <Icon name="chevron-forward" size={18} color={colors.textMuted} />
-  </TouchableOpacity>;
+  </MotionPressable>;
 }
 export default function ProfileScreen({ navigation }: Props) {
   const { user, profile } = useAuth();

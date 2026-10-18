@@ -13,6 +13,8 @@ import TutorialScreen from "../screens/Support/TutorialScreen";
 
 import { GuideProvider } from "../components/ScreenGuide";
 
+import { useReducedMotion } from "../components/Motion";
+
 const Stack = createNativeStackNavigator<RootStackParamList, "Root">();
 
 function AppTabs() {
@@ -22,10 +24,11 @@ function AppTabs() {
 
 export default function RootNavigator() {
   const { user } = useAuth();
+  const reducedMotion = useReducedMotion();
   return (
     <GuideProvider>
     <NavigationContainer>
-      <Stack.Navigator id="Root" screenOptions={{ headerShown: false }}>
+      <Stack.Navigator id="Root" screenOptions={{ headerShown: false, animation: reducedMotion ? "none" : "slide_from_bottom" }}>
         <Stack.Screen name="Main" component={AppTabs} />
         <Stack.Screen name="Help" component={HelpScreen} options={{ headerShown: true, title: "Help", headerTintColor: colors.primary }} />
         <Stack.Screen name="Privacy" component={PrivacyScreen} options={{ headerShown: true, title: "Privacy", headerTintColor: colors.primary }} />

@@ -1,7 +1,8 @@
+import { MotionPressable } from "../../components/Motion";
 import { useScreenGuide } from "../../components/ScreenGuide";
 import { displayCalendarDate } from "../../utils/calendarDays";
 import React, { useCallback, useEffect, useState } from "react";
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, StyleSheet, ActivityIndicator } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { getBookingsForBuyer, getBookingsForSeller } from "../../services/bookings";
@@ -80,7 +81,7 @@ export default function BookingsListScreen({ navigation, route }: Props) {
         <EmptyState icon="calendar-outline" title={period === "past" ? "No past bookings" : "Your next parking day awaits"}
           body={role === "seller" ? "Bookings for your spaces will appear here after someone reserves." : "Browse Explore to find a space. Your reservations and payment status will appear here."} /> : null}
       renderItem={({ item }) => (
-        <TouchableOpacity
+        <MotionPressable
           style={styles.card}
           onPress={() => navigation.navigate("BookingDetail", { bookingId: item.id })}
         >
@@ -97,7 +98,7 @@ export default function BookingsListScreen({ navigation, route }: Props) {
             <Text style={styles.price}>${(item.totalPriceCents / 100).toFixed(2)} CAD</Text>
             <Text style={styles.role}>View booking →</Text>
           </View>
-        </TouchableOpacity>
+        </MotionPressable>
       )}
     />
     {guideOverlay}
