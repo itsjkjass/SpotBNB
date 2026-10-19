@@ -14,6 +14,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "./firebase";
 import { ParkingSpot } from "../types/models";
+import { listingPhotoMetadata } from "../utils/listingPhoto";
 
 const spotsCollection = collection(db, "spots");
 
@@ -65,12 +66,12 @@ export async function getSpotsByOwner(ownerId: string): Promise<ParkingSpot[]> {
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as ParkingSpot);
 }
 
-export async function uploadSpotPhoto(ownerId: string, localUri: string): Promise<string> {
-  // eslint-disable-next-line no-undef
+export async function uploadSpotPhoto(ownerId: string, localUri: string, mimeType?: string | null): Promise<string> {
   const response = await fetch(localUri);
   const blob = await response.blob();
-  const filename = `spots/${ownerId}/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+  const { contentType, extension } = listingPhotoMetadata(localUri, blob, mimeType);
+  const filename = `spots/${ownerId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
   const storageRef = ref(storage, filename);
-  await uploadBytes(storageRef, blob);
+  await uploadBytes(storageRef, blob, { contentType });
   return getDownloadURL(storageRef);
 }

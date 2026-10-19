@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
-const { doc, setDoc, updateDoc, getDoc, getDocs, query, where, collection, deleteDoc, deleteField, serverTimestamp } = require('firebase/firestore');
+const { doc, setDoc, updateDoc, getDoc, getDocs, query, where, orderBy, limit, collection, deleteDoc, deleteField, serverTimestamp } = require('firebase/firestore');
 
 let env;
 before(async () => {
@@ -136,6 +136,57 @@ test('normal signup and profile edits remain allowed', async () => {
   await assertSucceeds(setDoc(ownRef(), profile()));
   await assertSucceeds(updateDoc(ownRef(), { displayName: 'New name', phone: '123' }));
   await assertSucceeds(getDoc(ownRef()));
+});
+
+test('real booking, earnings and inbox queries are scoped to the signed-in participant', async () => {
+  await env.withSecurityRulesDisabled(async context => {
+    const db = context.firestore();
+    for (const id of ['one', 'two']) {
+      await setDoc(doc(db, `bookings/${id}`), { buyerId: 'buyer', sellerId: 'seller', startTime: 1, status: 'confirmed' });
+      await setDoc(doc(db, `conversations/${id}`), { buyerId: 'buyer', sellerId: 'seller', updatedAt: 1 });
+    }
+    await setDoc(doc(db, 'bookings/private'), { buyerId: 'other', sellerId: 'outsider', startTime: 1 });
+  });
+  for (const uid of ['buyer', 'seller']) {
+    const db = env.authenticatedContext(uid).firestore();
+    for (const [name, sort] of [['bookings', 'startTime'], ['conversations', 'updatedAt']]) {
+      const results = await assertSucceeds(getDocs(query(collection(db, name), where(`${uid}Id`, '==', uid), orderBy(sort, 'desc'), limit(20))));
+      assert.equal(results.size, 2);
+      await assertFails(getDocs(query(collection(db, name), where(`${uid}Id`, '==', 'other'), orderBy(sort, 'desc'))));
+    }
+    await assertSucceeds(getDoc(doc(db, 'bookings/one')));
+    await assertFails(getDoc(doc(db, 'bookings/private')));
+    await assertFails(setDoc(doc(db, 'bookings/forged'), { buyerId: uid, sellerId: 'seller', status: 'confirmed' }));
+    await assertFails(updateDoc(doc(db, 'bookings/one'), { status: 'completed' }));
+    await assertFails(deleteDoc(doc(db, 'bookings/one')));
+  }
+});
+
+test('Explore and Host sorted queries work with uploaded photo URLs', async () => {
+  const owner = env.authenticatedContext('seller').firestore();
+  for (const [id, active] of [['published', true], ['draft', false]]) {
+    await assertSucceeds(setDoc(doc(owner, `spots/${id}`), { ownerId: 'seller', isActive: active, createdAt: serverTimestamp(),
+      title: 'Parking', pricePerDay: 25, currency: 'cad', timeZone: 'America/Toronto', photoUrls: ['https://example.invalid/photo.png'],
+      location: { latitude: 43.65, longitude: -79.38 } }));
+  }
+  const host = await assertSucceeds(getDocs(query(collection(owner, 'spots'), where('ownerId', '==', 'seller'), orderBy('createdAt', 'desc'))));
+  assert.equal(host.size, 2);
+  const guest = env.unauthenticatedContext().firestore();
+  const explore = await assertSucceeds(getDocs(query(collection(guest, 'spots'), where('isActive', '==', true), orderBy('createdAt', 'desc'))));
+  assert.deepEqual(explore.docs.map(d => d.id), ['published']);
+  await assertFails(getDocs(query(collection(guest, 'spots'), where('ownerId', '==', 'seller'), orderBy('createdAt', 'desc'))));
+});
+
+test('own push token updates work but private profiles cannot be read or edited by others', async () => {
+  await assertFails(updateDoc(ownRef(), { expoPushToken: 'synthetic-token' }));
+  await assertSucceeds(setDoc(ownRef(), profile()));
+  await assertSucceeds(updateDoc(ownRef(), { expoPushToken: 'replacement-token' }));
+  for (const ctx of [env.authenticatedContext('other'), env.unauthenticatedContext()]) {
+    const ref = doc(ctx.firestore(), 'users/seller');
+    await assertFails(getDoc(ref));
+    await assertFails(updateDoc(ref, { expoPushToken: 'stolen-token' }));
+    await assertFails(getDocs(collection(ctx.firestore(), 'users')));
+  }
 });
 
 test('creation cannot claim onboarding or supply a Stripe account', async () => {

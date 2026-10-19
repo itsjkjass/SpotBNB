@@ -20,6 +20,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { colors, spacing, radius } from "../../constants/theme";
 import type { MyListingsStackParamList } from "../../navigation/types";
 import { ParkingSpot, SpotType, VehicleSize } from "../../types/models";
+import { listingSaveError } from "../../utils/listingPhoto";
 
 type Props = NativeStackScreenProps<MyListingsStackParamList, "CreateListing">;
 
@@ -39,6 +40,7 @@ export default function CreateListingScreen({ navigation, route }: Props) {
   const [spotType, setSpotType] = useState<SpotType>("driveway");
   const [vehicleSizes, setVehicleSizes] = useState<VehicleSize[]>(["standard"]);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [photoTypes, setPhotoTypes] = useState<Record<string, string | undefined>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -64,17 +66,20 @@ export default function CreateListingScreen({ navigation, route }: Props) {
   };
 
   const pickPhoto = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert("Permission needed", "Allow photo access to add listing photos.");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.7,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setPhotos((current) => [...current, result.assets[0].uri]);
+    try {
+      // The system photo picker grants access to the selected image only.
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7 });
+      if (!result.canceled && result.assets[0]) {
+        const photo = result.assets[0];
+        if (photo.fileSize != null && photo.fileSize >= 10 * 1024 * 1024) {
+          Alert.alert("Photo too large", "Each listing photo must be smaller than 10 MB. Choose a smaller photo.");
+          return;
+        }
+        setPhotos(current => [...current, photo.uri]);
+        setPhotoTypes(current => ({ ...current, [photo.uri]: photo.mimeType }));
+      }
+    } catch {
+      Alert.alert("Couldn't open photos", "Please try choosing your photo again.");
     }
   };
 
@@ -102,7 +107,7 @@ export default function CreateListingScreen({ navigation, route }: Props) {
       }
       const { latitude, longitude } = geocoded[0];
 
-      const photoUrls = await Promise.all(photos.map((uri) => uri.startsWith("https://") ? uri : uploadSpotPhoto(user.uid, uri)));
+      const photoUrls = await Promise.all(photos.map((uri) => uri.startsWith("https://") ? uri : uploadSpotPhoto(user.uid, uri, photoTypes[uri])));
 
       const data = {
         title,
@@ -123,8 +128,7 @@ export default function CreateListingScreen({ navigation, route }: Props) {
 
       navigation.goBack();
     } catch (e: unknown) {
-      const message = (e as Error)?.message ?? "Failed to create listing.";
-      setError(message);
+      setError(listingSaveError(e));
     } finally {
       setSubmitting(false);
     }

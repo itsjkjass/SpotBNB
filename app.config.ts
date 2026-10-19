@@ -38,7 +38,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "ACCESS_FINE_LOCATION",
       "ACCESS_COARSE_LOCATION",
       "CAMERA",
-      "READ_EXTERNAL_STORAGE",
     ],
     config: {
       googleMaps: {
@@ -72,6 +71,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         photosPermission: "SpotBnB lets you choose listing photos and documents for optional checks.",
         cameraPermission: "SpotBnB uses your camera for listing photos and optional document checks, including a selfie.",
+        microphonePermission: false,
       },
     ],
     [

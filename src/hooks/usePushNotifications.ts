@@ -5,7 +5,7 @@ import type { RootStackParamList } from "../navigation/types";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../services/firebase";
 import { useAuth } from "./useAuth";
 
@@ -19,7 +19,8 @@ Notifications.setNotificationHandler({
 });
 
 export function usePushNotifications() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const profileUid = profile?.uid;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const handled = useRef<string | null>(null);
 
@@ -41,10 +42,20 @@ export function usePushNotifications() {
   }, [user, navigation]);
 
   useEffect(() => {
-    if (!user || !Device.isDevice) return;
+    // Auth can resolve before signup saves the profile. Never create a partial
+    // profile containing only a push token, which would block the signup write.
+    if (!user || profileUid !== user.uid || !Device.isDevice) return;
+    let active = true;
 
     (async () => {
       try {
+        // Android 13+ needs a notification channel before the permission prompt.
+        if (Platform.OS === "android") {
+          await Notifications.setNotificationChannelAsync("default", {
+            name: "default",
+            importance: Notifications.AndroidImportance.DEFAULT,
+          });
+        }
         const existing = await Notifications.getPermissionsAsync();
         let finalStatus = existing.status;
         if (finalStatus !== "granted") {
@@ -53,20 +64,14 @@ export function usePushNotifications() {
         }
         if (finalStatus !== "granted") return;
 
-        if (Platform.OS === "android") {
-          await Notifications.setNotificationChannelAsync("default", {
-            name: "default",
-            importance: Notifications.AndroidImportance.DEFAULT,
-          });
-        }
-
         const tokenResponse = await Notifications.getExpoPushTokenAsync();
-        await setDoc(doc(db, "users", user.uid), { expoPushToken: tokenResponse.data }, { merge: true });
+        if (active) await updateDoc(doc(db, "users", user.uid), { expoPushToken: tokenResponse.data });
       } catch (error) {
         // Remote push tokens require a development build (unsupported in Expo Go on newer SDKs) -
         // this is expected there and shouldn't block the rest of the app.
         console.warn("Push notification registration skipped:", error);
       }
     })();
-  }, [user]);
+    return () => { active = false; };
+  }, [user, profileUid]);
 }
