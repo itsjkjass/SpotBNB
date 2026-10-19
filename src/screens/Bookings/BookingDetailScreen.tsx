@@ -25,6 +25,7 @@ import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useFocusEffect } from "@react-navigation/native";
 import { useHeaderHeight } from "@react-navigation/elements";
 import { EmptyState, ui } from "../../components/ui";
+import ParkingDirections from "../../components/ParkingDirections";
 
 type Props = NativeStackScreenProps<BookingsStackParamList, "BookingDetail">;
 
@@ -124,6 +125,8 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>{booking.spotTitle}</Text>
       <Text style={styles.address}>{booking.spotAddress}</Text>
+      {(booking.status === "confirmed" || booking.status === "completed") &&
+        <ParkingDirections coordinate={booking.spotLocation} spotId={booking.spotId} />}
 
       <View style={styles.row}>
         <Text style={styles.label}>{booking.startDate ? "First date" : "Start"}</Text>

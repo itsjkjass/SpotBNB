@@ -72,6 +72,15 @@ test('same-date booking charges one day, independently of hourly legacy data', a
   assert.equal(f.writes[0].paymentIntentRequest.transfer_group, 'booking_booking');
 });
 
+test('booking snapshots the saved parking pin and ignores client-supplied coordinates', async () => {
+  const point = { latitude: 43.65123, longitude: -79.38123 };
+  const f = fixture({ location: point });
+  await f.run({ ...f.valid, spotLocation: { latitude: 0, longitude: 0 } });
+  point.latitude = 0;
+  assert.equal(f.writes[0].spotLocation.latitude, 43.65123);
+  assert.equal(f.writes[0].spotLocation.longitude, -79.38123);
+});
+
 test('two selected calendar dates charge two days and keep exact cents', async () => {
   const f = fixture({ pricePerDay: 30.01 });
   await f.run({ ...f.valid, startDate: '2090-10-24', endDate: '2090-10-25', expectedTotalPriceCents: 6002 });

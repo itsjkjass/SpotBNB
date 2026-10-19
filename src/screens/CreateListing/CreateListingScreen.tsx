@@ -9,9 +9,8 @@ import {
   Image,
   ActivityIndicator,
   Alert,
-  Platform,
+  Keyboard,
 } from "react-native";
-import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { createSpot, getSpot, updateSpot, uploadSpotPhoto } from "../../services/spots";
@@ -21,6 +20,9 @@ import { colors, spacing, radius } from "../../constants/theme";
 import type { MyListingsStackParamList } from "../../navigation/types";
 import { ParkingSpot, SpotType, VehicleSize } from "../../types/models";
 import { listingSaveError } from "../../utils/listingPhoto";
+import ParkingLocationPicker from "../../components/ParkingLocationPicker";
+import { isParkingCoordinate, ParkingCoordinate } from "../../utils/parkingLocation";
+import { Action, Icon } from "../../components/ui";
 
 type Props = NativeStackScreenProps<MyListingsStackParamList, "CreateListing">;
 
@@ -32,6 +34,8 @@ export default function CreateListingScreen({ navigation, route }: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [address, setAddress] = useState("");
+  const [confirmedLocation, setConfirmedLocation] = useState<{ address: string; coordinate: ParkingCoordinate } | null>(null);
+  const [pinOpen, setPinOpen] = useState(false);
   const [pricePerDay, setPricePerDay] = useState("");
   const [timeZone, setTimeZone] = useState<string>(DEFAULT_PARKING_TIME_ZONE);
   const [loading, setLoading] = useState(Boolean(route.params?.spotId));
@@ -51,6 +55,8 @@ export default function CreateListingScreen({ navigation, route }: Props) {
       if (!spot || spot.ownerId !== user?.uid) throw new Error("Listing unavailable.");
       setOriginal(spot);
       setTitle(spot.title); setDescription(spot.description); setAddress(spot.address);
+      setConfirmedLocation(spot.locationConfirmed && isParkingCoordinate(spot.location)
+        ? { address: spot.address.trim(), coordinate: spot.location } : null);
       setPricePerDay(spot.pricePerDay == null ? "" : String(spot.pricePerDay));
       setTimeZone(spot.timeZone ?? DEFAULT_PARKING_TIME_ZONE); setSpotType(spot.spotType);
       setVehicleSizes(spot.vehicleSizes); setPhotos(spot.photoUrls); setIsActive(spot.isActive);
@@ -93,27 +99,24 @@ export default function CreateListingScreen({ navigation, route }: Props) {
     let dailyPrice: number;
     try { dailyPrice = dailyRateCents(Number(pricePerDay)) / 100; }
     catch (e) { setError((e as Error).message); return; }
+    if (!confirmedLocation || confirmedLocation.address !== address.trim() || !isParkingCoordinate(confirmedLocation.coordinate)) {
+      setError("Confirm the parking entrance on the map before publishing.");
+      Keyboard.dismiss(); setPinOpen(true);
+      return;
+    }
 
     setSubmitting(true);
     try {
-      if (Platform.OS === "android" && original?.address !== address) {
-        const permission = await Location.requestForegroundPermissionsAsync();
-        if (!permission.granted) throw new Error("Allow location access to look up your parking address, then try again.");
-      }
-      const geocoded = original?.address === address ? [original.location] : await Location.geocodeAsync(address);
-      if (geocoded.length === 0) {
-        setError("Couldn't find that address. Try being more specific.");
-        return;
-      }
-      const { latitude, longitude } = geocoded[0];
+      const { latitude, longitude } = confirmedLocation.coordinate;
 
       const photoUrls = await Promise.all(photos.map((uri) => uri.startsWith("https://") ? uri : uploadSpotPhoto(user.uid, uri, photoTypes[uri])));
 
       const data = {
         title,
         description,
-        address,
+        address: address.trim(),
         location: { latitude, longitude },
+        locationConfirmed: true,
         photoUrls,
         pricePerDay: dailyPrice,
         timeZone,
@@ -135,6 +138,7 @@ export default function CreateListingScreen({ navigation, route }: Props) {
   };
 
   return (
+    <>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {loading ? <Text style={styles.error}>{error || "Loading your listing…"}</Text> : <>
       <Text style={styles.draftNotice}>Publish your space to receive bookings. Set up payouts later, before withdrawing your earnings. You can hide your listing at any time in My Listings.</Text>
@@ -151,7 +155,18 @@ export default function CreateListingScreen({ navigation, route }: Props) {
       />
 
       <Text style={styles.label}>Address</Text>
-      <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light" style={styles.input} value={address} onChangeText={setAddress} placeholder="123 Main St, Toronto, ON" />
+      <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light" style={styles.input} value={address} onChangeText={value => {
+        setAddress(value);
+        if (value.trim() !== address.trim()) setConfirmedLocation(null);
+      }} placeholder="123 Main St, Toronto, ON" />
+      <View style={styles.pinCard}>
+        <View style={styles.pinTitle}><Icon name="location-outline" color={colors.primary} /><Text style={styles.pinLabel}>{confirmedLocation ? "Parking pin confirmed" : "Where should drivers arrive?"}</Text></View>
+        <Text style={styles.pinHint}>Use your address to find the area, then place the pin at your parking entrance.</Text>
+        <Action secondary label={confirmedLocation ? "Adjust parking pin" : "Set parking pin"} disabled={submitting} onPress={() => {
+          if (!address.trim()) { setError("Enter your parking address first."); return; }
+          Keyboard.dismiss(); setPinOpen(true);
+        }} />
+      </View>
 
       <Text style={styles.label}>Price per calendar day (CAD)</Text>
       <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light"
@@ -216,6 +231,12 @@ export default function CreateListingScreen({ navigation, route }: Props) {
       </MotionPressable>
       </>}
     </ScrollView>
+    {pinOpen && <ParkingLocationPicker address={address.trim()}
+      initialCoordinate={confirmedLocation?.coordinate ?? (original?.address.trim() === address.trim() ? original.location : undefined)}
+      onClose={() => setPinOpen(false)} onConfirm={coordinate => {
+        setConfirmedLocation({ address: address.trim(), coordinate }); setPinOpen(false); setError(null);
+      }} />}
+    </>
   );
 }
 
@@ -236,6 +257,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   multiline: { minHeight: 80, textAlignVertical: "top" },
+  pinCard: { padding: spacing.md, marginTop: spacing.md, gap: spacing.sm, backgroundColor: colors.paper, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
+  pinTitle: { flexDirection: "row", alignItems: "center", gap: 8 }, pinLabel: { flex: 1, color: colors.text, fontSize: 16, fontWeight: "600" },
+  pinHint: { color: colors.textMuted, fontSize: 14, lineHeight: 20 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.xs },
   chip: {
     paddingHorizontal: spacing.md,

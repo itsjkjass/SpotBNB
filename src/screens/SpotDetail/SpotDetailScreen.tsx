@@ -19,6 +19,7 @@ import DocumentBadge from "../../components/DocumentBadge";
 import { supportsDailyBooking } from "../../utils/calendarDays";
 import { displayCalendarDate } from "../../utils/calendarDays";
 import { Icon, ui } from "../../components/ui";
+import ParkingDirections from "../../components/ParkingDirections";
 
 type Props = NativeStackScreenProps<SearchStackParamList, "SpotDetail">;
 
@@ -95,6 +96,7 @@ export default function SpotDetailScreen({ route, navigation }: Props) {
           <Text style={styles.sectionTitle}>About this space</Text>
           <Text style={styles.description}>{spot.description}</Text>
 
+          <ParkingDirections coordinate={spot.location} />
           <View style={styles.facts}>
             <View style={styles.fact}><Icon name="home-outline" color={colors.primary} /><Text style={styles.detail}>{spot.spotType.charAt(0).toUpperCase() + spot.spotType.slice(1)}</Text></View>
             <View style={styles.fact}><Icon name="car-outline" color={colors.primary} /><Text style={styles.detail}>{spot.vehicleSizes.map(size => size === "suv_truck" ? "SUV / truck" : size.charAt(0).toUpperCase() + size.slice(1)).join(" · ")}</Text></View>

@@ -45,9 +45,9 @@ exports.mount = function mount(file, exportName, dependencies, sourceOverride) {
     throw new Error(`Unexpected dependency ${name}`);
   } });
   return {
-    render() {
+    render(props = { children: null }) {
       cursor = 0;
-      const tree = exports[exportName]({ children: null });
+      const tree = exports[exportName](props);
       const effects = pending; pending = []; effects.forEach(fn => fn());
       return tree;
     },

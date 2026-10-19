@@ -42,6 +42,10 @@ export const createBooking = onCall<CreateBookingRequest>(
       throw new HttpsError("not-found", "This parking spot no longer exists.");
     }
     const spot = spotSnap.data()!;
+    const point = spot.location;
+    const spotLocation = point && Number.isFinite(point.latitude) && Math.abs(point.latitude) <= 90
+      && Number.isFinite(point.longitude) && Math.abs(point.longitude) <= 180
+      ? { latitude: point.latitude, longitude: point.longitude } : undefined;
     if (!spot.isActive) {
       throw new HttpsError("failed-precondition", "This parking spot is no longer available.");
     }
@@ -107,6 +111,7 @@ export const createBooking = onCall<CreateBookingRequest>(
         spotId,
         spotTitle: spot.title,
         spotAddress: spot.address,
+        ...(spotLocation ? { spotLocation } : {}),
         buyerId: uid,
         sellerId: spot.ownerId,
         startTime,

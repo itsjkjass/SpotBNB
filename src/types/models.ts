@@ -27,6 +27,7 @@ export interface ParkingSpot {
     longitude: number;
   };
   photoUrls: string[];
+  locationConfirmed?: boolean;
   pricePerHour?: number; // Legacy records only; never used to calculate new bookings.
   pricePerDay?: number;
   timeZone?: string;
@@ -57,6 +58,7 @@ export interface Booking {
   spotId: string;
   spotTitle: string;
   spotAddress: string;
+  spotLocation?: { latitude: number; longitude: number };
   buyerId: string;
   sellerId: string;
   startTime: number;
