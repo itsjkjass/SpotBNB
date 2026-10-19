@@ -181,6 +181,7 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
             placeholder="How was this parking spot?"
             value={comment}
             onChangeText={setComment}
+            maxLength={2000}
             multiline
           />
           <MotionPressable style={styles.button} onPress={handleSubmitReview} disabled={busy}>

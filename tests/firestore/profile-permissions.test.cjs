@@ -228,3 +228,45 @@ test('backend-owned Stripe fields survive permitted edits and cannot be replaced
   assert.equal(data.stripeConnectAccountId, 'acct_server');
   assert.equal(data.stripeConnectOnboarded, true);
 });
+
+test('only the buyer of a completed booking can review its actual listing and seller', async () => {
+  await env.withSecurityRulesDisabled(async context => {
+    for (const status of ['completed', 'confirmed', 'pending_payment', 'cancelled']) {
+      await setDoc(doc(context.firestore(), `bookings/${status}`), { buyerId: 'buyer', sellerId: 'seller', spotId: 'space', status });
+    }
+  });
+  const data = { bookingId: 'completed', spotId: 'space', authorId: 'buyer', targetId: 'seller', rating: 5, comment: 'Great parking', createdAt: serverTimestamp() };
+  const buyer = env.authenticatedContext('buyer').firestore();
+  await assertSucceeds(setDoc(doc(buyer, 'reviews/valid'), data));
+  const guest = env.unauthenticatedContext().firestore();
+  await assertSucceeds(getDocs(query(collection(guest, 'reviews'), where('spotId', '==', 'space'), orderBy('createdAt', 'desc'))));
+  for (const uid of ['seller', 'outsider']) {
+    await assertFails(setDoc(doc(env.authenticatedContext(uid).firestore(), `reviews/${uid}`), { ...data, authorId: uid }));
+  }
+  await assertFails(setDoc(doc(guest, 'reviews/guest'), data));
+  for (const bookingId of ['confirmed', 'pending_payment', 'cancelled', 'missing']) {
+    await assertFails(setDoc(doc(buyer, `reviews/${bookingId}`), { ...data, bookingId }));
+  }
+  for (const fields of [{ spotId: 'other-space' }, { targetId: 'other-seller' }, { authorId: 'other-buyer' },
+    { rating: 0 }, { rating: 6 }, { rating: 2.5 }, { rating: '5' }, { comment: 'x'.repeat(2001) },
+    { createdAt: 0 }, { internalData: 'not public' }]) {
+    await assertFails(setDoc(doc(buyer, 'reviews/invalid'), { ...data, ...fields }));
+  }
+  await assertFails(updateDoc(doc(buyer, 'reviews/valid'), { rating: 1 }));
+  await assertFails(deleteDoc(doc(buyer, 'reviews/valid')));
+});
+
+test('hosts cannot manufacture or alter rating totals while normal listing edits still work', async () => {
+  const db = env.authenticatedContext('seller').firestore();
+  const spot = doc(db, 'spots/space');
+  const data = { ownerId: 'seller', isActive: true, title: 'Space', averageRating: 0, reviewCount: 0 };
+  for (const fields of [{ averageRating: 5 }, { reviewCount: 100 }]) {
+    await assertFails(setDoc(spot, { ...data, ...fields }));
+  }
+  await assertSucceeds(setDoc(spot, data));
+  await env.withSecurityRulesDisabled(ctx => updateDoc(doc(ctx.firestore(), 'spots/space'), { averageRating: 4.5, reviewCount: 2 }));
+  await assertSucceeds(updateDoc(spot, { title: 'Updated space', isActive: false }));
+  for (const fields of [{ averageRating: 5 }, { reviewCount: 100 }, { averageRating: deleteField() }, { reviewCount: deleteField() }]) {
+    await assertFails(updateDoc(spot, fields));
+  }
+});
