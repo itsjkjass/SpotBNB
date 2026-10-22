@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { loadBackend } = require('./helpers/backend.cjs');
 
-function fixture(prices = {}) {
+function fixture(prices = {}, mode = 'test') {
   const writes = [];
   let reads = 0;
   let payments = 0;
@@ -20,7 +20,7 @@ function fixture(prices = {}) {
   class HttpsError extends Error { constructor(code, message) { super(message); this.code = code; } }
   const { createBooking } = loadBackend('callable/createBooking.ts', {
     'firebase-functions/v2/https': { onCall: (_, handler) => handler, HttpsError },
-    '../admin': { db }, '../config': { stripeSecretKey: {}, PLATFORM_FEE_PERCENT: 12, PAYMENT_HOLD_MS: 900000 },
+    '../admin': { db }, '../config': { stripeSecretKey: { value: () => `sk_${mode}_fixture` }, PLATFORM_FEE_PERCENT: 12, PAYMENT_HOLD_MS: 900000 },
     '../services/bookingPayment': { getOrCreateBookingPayment: async () => {
       payments++; return { client_secret: 'test', status: 'requires_payment_method' };
     } },
@@ -37,6 +37,24 @@ test('malformed request bodies fail before database access', async () => {
     await assert.rejects(f.run(data), { code: 'invalid-argument' });
     assert.equal(f.reads(), 0);
   }
+});
+
+test('live backend rejects old or mismatched builds before reserving a space', async () => {
+  for (const paymentMode of [undefined, 'test', 'invalid']) {
+    const f = fixture({}, 'live');
+    await assert.rejects(f.run({ ...f.valid, paymentMode }), { code: 'failed-precondition' });
+    assert.equal(f.reads(), 0);
+    assert.equal(f.payments(), 0);
+  }
+  const f = fixture({}, 'live');
+  await f.run({ ...f.valid, paymentMode: 'live' });
+  assert.equal(f.writes[0].paymentMode, 'live');
+});
+
+test('test backend rejects a live app before reserving a space', async () => {
+  const f = fixture();
+  await assert.rejects(f.run({ ...f.valid, paymentMode: 'live' }), { code: 'failed-precondition' });
+  assert.equal(f.reads(), 0);
 });
 
 test('invalid IDs and malformed calendar dates fail before database access', async () => {

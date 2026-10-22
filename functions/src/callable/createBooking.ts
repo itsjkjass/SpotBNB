@@ -10,6 +10,7 @@ interface CreateBookingRequest {
   startDate: string;
   endDate: string;
   expectedTotalPriceCents: number;
+  paymentMode?: "live" | "test";
 }
 
 export const createBooking = onCall<CreateBookingRequest>(
@@ -22,6 +23,12 @@ export const createBooking = onCall<CreateBookingRequest>(
 
     if (!request.data || typeof request.data !== "object" || Array.isArray(request.data)) {
       throw new HttpsError("invalid-argument", "Invalid booking request.");
+    }
+    const paymentMode = stripeSecretKey.value().startsWith("sk_live_") ? "live" : "test";
+    // Older sandbox apps cannot use a live PaymentIntent. Reject before reserving
+    // a space so an outdated build never leaves an unpayable booking behind.
+    if (request.data.paymentMode !== paymentMode && !(paymentMode === "test" && request.data.paymentMode === undefined)) {
+      throw new HttpsError("failed-precondition", "Payment settings have changed. Update SpotBnB to the latest version before booking.");
     }
     const { spotId, startDate, endDate } = request.data;
     if (typeof spotId !== "string" || !spotId.trim() || spotId.includes("/") ||
@@ -108,6 +115,7 @@ export const createBooking = onCall<CreateBookingRequest>(
       }
 
       transaction.set(bookingRef, {
+        paymentMode,
         spotId,
         spotTitle: spot.title,
         spotAddress: spot.address,

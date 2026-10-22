@@ -22,11 +22,12 @@ interface CreateBookingResponse {
  * done server-side in a Cloud Function so pricing/availability can't be spoofed by the client.
  */
 export async function requestBooking(payload: CreateBookingRequest): Promise<CreateBookingResponse> {
-  const createBooking = httpsCallable<CreateBookingRequest, CreateBookingResponse>(
+  const createBooking = httpsCallable<CreateBookingRequest & { paymentMode: "live" | "test" }, CreateBookingResponse>(
     functions,
     "createBooking"
   );
-  const result = await createBooking(payload);
+  const paymentMode = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith("pk_live_") ? "live" : "test";
+  const result = await createBooking({ ...payload, paymentMode });
   return result.data;
 }
 

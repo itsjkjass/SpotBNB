@@ -56,7 +56,7 @@ function fixture({ timeoutOnce = false, failSaveOnce = false } = {}) {
     'firebase-functions/v2/https': { onCall: (_, handler) => handler, HttpsError },
     'firebase-functions/v2': { logger: { error() {}, warn() {} } },
     '../admin': { db }, '../stripeClient': { getStripeClient: () => stripe },
-    '../config': { stripeSecretKey: {}, PLATFORM_FEE_PERCENT: 12,
+    '../config': { stripeSecretKey: { value: () => 'sk_test_fixture' }, PLATFORM_FEE_PERCENT: 12,
       PAYMENT_RECOVERY_WINDOW_MS: 23 * 3600000, PAYMENT_RECHECK_MS: 300000, PAYMENT_HOLD_MS: 900000 },
   };
   const { createBooking } = loadBackend('callable/createBooking.ts', dependencies);
