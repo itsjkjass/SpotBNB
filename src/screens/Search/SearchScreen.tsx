@@ -92,7 +92,7 @@ export default function SearchScreen({ navigation }: Props) {
       <Text accessibilityRole="header" style={ui.heading}>Park for the day.</Text>
       <Text style={ui.body}>A space near where you need to be.</Text>
       <View ref={guideFirstTarget} collapsable={false}>
-        <AddressSearch value={destination} placeholder="Where are you headed?" onChangeText={value => { setDestination(value); setSelectedDestination(null); }}
+        <AddressSearch value={destination} disabled={searching} placeholder="Where are you headed?" onChangeText={value => { setDestination(value); setSelectedDestination(null); }}
           onSelect={selected => {
             setDestination(selected.address); setSelectedDestination(selected); setLocationError(""); setSelectedId(null);
             setRegion({ ...selected.coordinate, latitudeDelta: 0.008, longitudeDelta: 0.008 });
