@@ -77,6 +77,7 @@ function listing(existing) {
     '../../hooks/useAuth': { useAuth: () => ({ user: { uid: 'owner' } }) }, '../../constants/theme': theme,
     '../../utils/listingPhoto': { listingSaveError: e => e.message }, '../../utils/parkingLocation': location,
     '../../components/ParkingLocationPicker': { __esModule: true, default: 'Picker' }, '../../components/ui': { Action: 'Action', Icon: 'Icon' },
+    '../../components/AddressSearch': { __esModule: true, default: 'Input' },
   });
   const props = { navigation: { goBack() {} }, route: { params: existing ? { spotId: 'spot' } : {} } };
   const tree = () => view.render(props);
@@ -104,6 +105,20 @@ test('editing a confirmed listing preserves its chosen coordinates', async () =>
   await flush(); f.tree(); f.fill('Driveway near BMO Field', 'New title'); await f.save();
   assert.equal(f.writes[0][1].location.longitude, entrance.longitude);
   f.view.unmount();
+});
+
+test('a chosen address seeds its exact point but still requires entrance confirmation; typing invalidates that point', async () => {
+  const f = listing(); f.fill('Driveway near BMO Field', 'Parking'); f.fill('25.00', '25');
+  find(f.tree(), 'Input', p => p.placeholder === '123 Main St, Toronto, ON').props.onSelect({ address: '100 Queen Street', coordinate: entrance, attributions: [] });
+  await f.save();
+  assert.equal(f.writes.length, 0);
+  assert.equal(find(f.tree(), 'Picker').props.initialCoordinate, entrance);
+  find(f.tree(), 'Picker').props.onConfirm(entrance); await f.save();
+  assert.equal(f.writes[0][1].address, '100 Queen Street');
+  assert.equal(f.writes[0][1].location.longitude, entrance.longitude);
+  f.fill('123 Main St, Toronto, ON', '200 King Street'); await f.save();
+  assert.equal(find(f.tree(), 'Picker').props.initialCoordinate, undefined);
+  assert.equal(f.writes.length, 1); f.view.unmount();
 });
 test('directions use exact coordinates including negative signs and reject invalid destinations', () => {
   const url = new URL(location.parkingDirectionsUrl(entrance));

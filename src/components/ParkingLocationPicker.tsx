@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Modal, StyleSheet, Text, View } from "react-native";
-import MapView, { Marker } from "react-native-maps";
+import { ActivityIndicator, Linking, Modal, StyleSheet, Text, View } from "react-native";
+import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, depth, radius, spacing } from "../constants/theme";
 import { findParkingAddress } from "../services/parkingLocation";
@@ -8,11 +8,11 @@ import { isParkingCoordinate, ParkingCoordinate } from "../utils/parkingLocation
 import { MotionPressable, useReducedMotion } from "./Motion";
 import { Action, Icon } from "./ui";
 
-type Props = { address: string; initialCoordinate?: ParkingCoordinate; onConfirm: (point: ParkingCoordinate) => void; onClose: () => void };
-const closeRegion = (point: ParkingCoordinate) => ({ ...point, latitudeDelta: 0.004, longitudeDelta: 0.004 });
+type Props = { address: string; initialCoordinate?: ParkingCoordinate; attributions?: { provider: string; uri: string }[]; onConfirm: (point: ParkingCoordinate) => void; onClose: () => void };
+const closeRegion = (point: ParkingCoordinate) => ({ ...point, latitudeDelta: 0.0015, longitudeDelta: 0.0015 });
 const CANADA_REGION = { latitude: 55, longitude: -96, latitudeDelta: 42, longitudeDelta: 65 };
 
-export default function ParkingLocationPicker({ address, initialCoordinate, onConfirm, onClose }: Props) {
+export default function ParkingLocationPicker({ address, initialCoordinate, attributions, onConfirm, onClose }: Props) {
   const initial = isParkingCoordinate(initialCoordinate) ? initialCoordinate : null;
   const [pin, setPin] = useState<ParkingCoordinate | null>(initial);
   const [region, setRegion] = useState(initial ? closeRegion(initial) : CANADA_REGION);
@@ -49,7 +49,7 @@ export default function ParkingLocationPicker({ address, initialCoordinate, onCo
       {locating && <View style={styles.status}><ActivityIndicator color={colors.primary} /><Text style={styles.note}>Finding your address…</Text></View>}
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
       <View style={styles.mapFrame}><View style={styles.mapClip}>
-        <MapView style={StyleSheet.absoluteFill} region={region} onRegionChangeComplete={setRegion} onMapReady={() => setMapReady(true)}
+        <MapView provider={PROVIDER_GOOGLE} style={StyleSheet.absoluteFill} region={region} onRegionChangeComplete={setRegion} onMapReady={() => setMapReady(true)}
           onPress={event => select(event.nativeEvent.coordinate)} toolbarEnabled={false}>
           {pin && <Marker coordinate={pin} draggable pinColor={colors.primary} title="Parking entrance" stopPropagation
             onDragStart={() => { changed.current = true; setDragging(true); }}
@@ -57,6 +57,7 @@ export default function ParkingLocationPicker({ address, initialCoordinate, onCo
         </MapView>
       </View></View>
       <View style={styles.footer}>
+        {attributions?.map(item => <Text key={item.uri} style={styles.note} accessibilityRole="link" onPress={() => { if (item.uri.startsWith("https://")) void Linking.openURL(item.uri).catch(() => {}); }}>{item.provider}</Text>)}
         <Text style={styles.note}>Buyers will see this pin and use it for directions. Check the entrance before confirming.</Text>
         <Action label="Use this pin" disabled={!pin || !mapReady || dragging} onPress={() => { if (pin && mapReady && !dragging) onConfirm(pin); }} />
       </View>

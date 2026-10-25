@@ -21,6 +21,8 @@ import type { MyListingsStackParamList } from "../../navigation/types";
 import { ParkingSpot, SpotType, VehicleSize } from "../../types/models";
 import { listingSaveError } from "../../utils/listingPhoto";
 import ParkingLocationPicker from "../../components/ParkingLocationPicker";
+import AddressSearch from "../../components/AddressSearch";
+import type { ResolvedAddress } from "../../services/addresses";
 import { isParkingCoordinate, ParkingCoordinate } from "../../utils/parkingLocation";
 import { Action, Icon } from "../../components/ui";
 
@@ -36,6 +38,7 @@ export default function CreateListingScreen({ navigation, route }: Props) {
   const [address, setAddress] = useState("");
   const [confirmedLocation, setConfirmedLocation] = useState<{ address: string; coordinate: ParkingCoordinate } | null>(null);
   const [pinOpen, setPinOpen] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState<ResolvedAddress | null>(null);
   const [pricePerDay, setPricePerDay] = useState("");
   const [timeZone, setTimeZone] = useState<string>(DEFAULT_PARKING_TIME_ZONE);
   const [loading, setLoading] = useState(Boolean(route.params?.spotId));
@@ -139,7 +142,7 @@ export default function CreateListingScreen({ navigation, route }: Props) {
 
   return (
     <>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       {loading ? <Text style={styles.error}>{error || "Loading your listing…"}</Text> : <>
       <Text style={styles.draftNotice}>Publish your space to receive bookings. Set up payouts later, before withdrawing your earnings. You can hide your listing at any time in My Listings.</Text>
       <Text style={styles.label}>Title</Text>
@@ -155,13 +158,15 @@ export default function CreateListingScreen({ navigation, route }: Props) {
       />
 
       <Text style={styles.label}>Address</Text>
-      <TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light" style={styles.input} value={address} onChangeText={value => {
+      <AddressSearch value={address} disabled={submitting} onChangeText={value => {
         setAddress(value);
-        if (value.trim() !== address.trim()) setConfirmedLocation(null);
+        if (value.trim() !== address.trim()) { setConfirmedLocation(null); setSelectedAddress(null); }
+      }} onSelect={selected => {
+        setAddress(selected.address); setSelectedAddress(selected); setConfirmedLocation(null); setError(null);
       }} placeholder="123 Main St, Toronto, ON" />
       <View style={styles.pinCard}>
         <View style={styles.pinTitle}><Icon name="location-outline" color={colors.primary} /><Text style={styles.pinLabel}>{confirmedLocation ? "Parking pin confirmed" : "Where should drivers arrive?"}</Text></View>
-        <Text style={styles.pinHint}>Use your address to find the area, then place the pin at your parking entrance.</Text>
+        <Text style={styles.pinHint}>{selectedAddress ? "Address found. Check the pin at your parking entrance before publishing." : "Choose a matching address above, then confirm the pin at your parking entrance."}</Text>
         <Action secondary label={confirmedLocation ? "Adjust parking pin" : "Set parking pin"} disabled={submitting} onPress={() => {
           if (!address.trim()) { setError("Enter your parking address first."); return; }
           Keyboard.dismiss(); setPinOpen(true);
@@ -232,7 +237,8 @@ export default function CreateListingScreen({ navigation, route }: Props) {
       </>}
     </ScrollView>
     {pinOpen && <ParkingLocationPicker address={address.trim()}
-      initialCoordinate={confirmedLocation?.coordinate ?? (original?.address.trim() === address.trim() ? original.location : undefined)}
+      initialCoordinate={confirmedLocation?.coordinate ?? selectedAddress?.coordinate ?? (original?.address.trim() === address.trim() ? original.location : undefined)}
+      attributions={selectedAddress?.attributions}
       onClose={() => setPinOpen(false)} onConfirm={coordinate => {
         setConfirmedLocation({ address: address.trim(), coordinate }); setPinOpen(false); setError(null);
       }} />}

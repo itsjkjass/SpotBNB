@@ -1,8 +1,8 @@
 import { Reveal } from "../../components/Motion";
 import { useScreenGuide } from "../../components/ScreenGuide";
 import React, { useState, useCallback } from "react";
-import { View, Text, TextInput, StyleSheet, ActivityIndicator, Pressable, FlatList, ScrollView, Keyboard, Platform } from "react-native";
-import MapView, { Marker, Region } from "react-native-maps";
+import { View, Text, StyleSheet, ActivityIndicator, FlatList, ScrollView, Keyboard, Platform, Linking } from "react-native";
+import MapView, { Marker, Region, PROVIDER_GOOGLE } from "react-native-maps";
 import * as Location from "expo-location";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -13,7 +13,9 @@ import type { SearchStackParamList } from "../../navigation/types";
 import { dateInZone, DEFAULT_PARKING_TIME_ZONE, supportsDailyBooking } from "../../utils/calendarDays";
 import BookingCalendar from "../../components/BookingCalendar";
 import SpotCard from "../../components/SpotCard";
-import { Choice, EmptyState, Icon, ui } from "../../components/ui";
+import { Choice, EmptyState, ui } from "../../components/ui";
+import AddressSearch from "../../components/AddressSearch";
+import type { ResolvedAddress } from "../../services/addresses";
 
 type Props = NativeStackScreenProps<SearchStackParamList, "SearchMap">;
 const DEFAULT_REGION: Region = { latitude: 43.6532, longitude: -79.3832, latitudeDelta: 0.1, longitudeDelta: 0.1 };
@@ -27,6 +29,7 @@ export default function SearchScreen({ navigation }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [listMode, setListMode] = useState(false);
   const [destination, setDestination] = useState("");
+  const [selectedDestination, setSelectedDestination] = useState<ResolvedAddress | null>(null);
   const [searching, setSearching] = useState(false);
   const [locationAllowed, setLocationAllowed] = useState(false);
   const [locationError, setLocationError] = useState("");
@@ -72,6 +75,7 @@ export default function SearchScreen({ navigation }: Props) {
         point = results[0];
       }
       setRegion({ latitude: point.latitude, longitude: point.longitude, latitudeDelta: 0.06, longitudeDelta: 0.06 });
+      setSelectedDestination(null);
       setSelectedId(null);
     } catch (e) { setLocationError((e as Error).message || "Location search is unavailable. You can still move the map."); }
     finally { setSearching(false); }
@@ -87,14 +91,14 @@ export default function SearchScreen({ navigation }: Props) {
     <ScrollView style={styles.topScroll} contentContainerStyle={styles.top} keyboardShouldPersistTaps="handled">
       <Text accessibilityRole="header" style={ui.heading}>Park for the day.</Text>
       <Text style={ui.body}>A space near where you need to be.</Text>
-      <View ref={guideFirstTarget} collapsable={false} style={styles.search}>
-        <Icon name="search-outline" color={colors.primary} />
-        <TextInput accessibilityLabel="City or destination" placeholder="Where are you headed?" placeholderTextColor={colors.textMuted}
-          value={destination} onChangeText={setDestination} onSubmitEditing={() => findDestination()} returnKeyType="search" style={styles.input} />
-        <Pressable accessibilityRole="button" accessibilityLabel="Search destination" disabled={searching} onPress={() => findDestination()} style={styles.iconButton}>
-          {searching ? <ActivityIndicator color={colors.primary} /> : <Icon name="arrow-forward" color={colors.primary} />}
-        </Pressable>
+      <View ref={guideFirstTarget} collapsable={false}>
+        <AddressSearch value={destination} placeholder="Where are you headed?" onChangeText={value => { setDestination(value); setSelectedDestination(null); }}
+          onSelect={selected => {
+            setDestination(selected.address); setSelectedDestination(selected); setLocationError(""); setSelectedId(null);
+            setRegion({ ...selected.coordinate, latitudeDelta: 0.008, longitudeDelta: 0.008 });
+          }} />
       </View>
+      {!!destination.trim() && !selectedDestination && <Choice icon="search-outline" label={searching ? "Finding area…" : "Search typed address"} onPress={() => findDestination()} />}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.choices}>
         <Choice icon="calendar-outline" label={datesChosen ? `${startDate.slice(5)} — ${endDate.slice(5)}` : "Choose dates"} selected={datesChosen} onPress={() => { Keyboard.dismiss(); setDatesOpen(true); }} />
         <Choice label="Garage" selected={garage} onPress={() => setGarage(!garage)} />
@@ -109,12 +113,15 @@ export default function SearchScreen({ navigation }: Props) {
         ListEmptyComponent={!loading ? <EmptyState title={error ? "Let's try that again" : "No spaces here yet"}
           body={error || "Move the map to another area or clear your filters."} action={error ? "Try again" : "Show map"} onPress={error ? retry : () => setListMode(false)} /> : null}
         renderItem={({ item }) => <SpotCard spot={item} onPress={() => openSpot(item)} />} /> : <>
-        <MapView style={StyleSheet.absoluteFill} region={region} onRegionChangeComplete={setRegion} showsUserLocation={locationAllowed}>
+        <MapView provider={PROVIDER_GOOGLE} style={StyleSheet.absoluteFill} region={region} onRegionChangeComplete={setRegion} showsUserLocation={locationAllowed}>
+          {selectedDestination && <Marker coordinate={selectedDestination.coordinate} title="Your destination" description={selectedDestination.address} pinColor={colors.primary} />}
           {filtered.map(spot => <Marker key={spot.id} coordinate={spot.location} onPress={() => setSelectedId(spot.id)}
             accessibilityLabel={`${spot.title}, ${spot.pricePerDay} dollars per day`}>
             <View style={[styles.marker, selected?.id === spot.id && styles.markerSelected]}><Text style={[styles.markerText, selected?.id === spot.id && { color: colors.paper }]}>${spot.pricePerDay?.toFixed(2)}</Text></View>
           </Marker>)}
         </MapView>
+        {!!selectedDestination?.attributions.length && <View style={styles.attributions}>{selectedDestination.attributions.map(item => <Text key={item.uri} style={styles.note} accessibilityRole="link"
+          onPress={() => { if (item.uri.startsWith("https://")) void Linking.openURL(item.uri).catch(() => {}); }}>{item.provider}</Text>)}</View>}
         <View style={styles.mapTools}>
           <Choice icon="locate-outline" label="Near me" onPress={() => findDestination(true)} />
           {loading && <ActivityIndicator color={colors.primary} />}
@@ -135,8 +142,7 @@ export default function SearchScreen({ navigation }: Props) {
 }
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background }, topScroll: { flexGrow: 0, maxHeight: "60%" }, top: { padding: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md, gap: 10 },
-  search: { ...depth.soft, flexDirection: "row", alignItems: "center", backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingLeft: spacing.md },
-  input: { flex: 1, minHeight: 54, fontSize: 16, color: colors.text, paddingHorizontal: 10 }, iconButton: { minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" },
+  attributions: { position: "absolute", bottom: 0, right: 0, backgroundColor: colors.paper, padding: 4 },
   choices: { gap: 8 },
   note: { color: colors.textMuted, fontSize: 14, lineHeight: 20 }, error: { color: colors.danger, fontSize: 14, lineHeight: 20 },
   results: { flex: 1, minHeight: 180 }, mapFrame: { ...depth.raised, marginHorizontal: spacing.md, marginBottom: spacing.md, borderRadius: radius.lg, backgroundColor: colors.primarySoft }, resultsClip: { flex: 1, borderRadius: radius.lg, overflow: "hidden" }, list: { padding: spacing.lg, paddingBottom: 80 }, resultsLabel: { ...ui.label, marginBottom: spacing.md },

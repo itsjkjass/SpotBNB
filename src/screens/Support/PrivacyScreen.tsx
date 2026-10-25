@@ -10,6 +10,7 @@ export default function PrivacyScreen() {
     <Text style={styles.body}>The app uses your account details to sign you in and connect you with your listings, reservations and messages. Firebase provides account and database services.</Text>
     <Text style={styles.title}>Location and listings</Text>
     <Text style={styles.body}>With your permission, the app uses your location to help you find parking. Active listings display their address, photos, description and price. Private drafts are visible to their owner.</Text>
+    <Text style={styles.body}>Address suggestions use Google Maps. Typed searches are sent to Google to find matching addresses; SpotBnB does not save search history. A host confirms the parking entrance before the listing is published.</Text>
     <Text style={styles.title}>Payments and payouts</Text>
     <Text style={styles.body}>Stripe processes payments and seller payout setup. The app keeps payment references and booking status; you enter payment details through Stripe.</Text>
     <Text style={styles.title}>Messages</Text>

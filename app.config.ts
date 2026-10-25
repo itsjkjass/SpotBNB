@@ -49,6 +49,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     favicon: "./assets/favicon.png",
   },
   plugins: [
+    ["react-native-maps", {
+      androidGoogleMapsApiKey: GOOGLE_MAPS_API_KEY,
+      iosGoogleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_IOS_API_KEY,
+    }],
     "expo-font",
     ["expo-splash-screen", {
       backgroundColor: "#084F38",

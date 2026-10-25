@@ -3,7 +3,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
 
-exports.loadBackend = function loadBackend(entry, dependencies) {
+exports.loadBackend = function loadBackend(entry, dependencies, globals = {}) {
   const root = path.resolve(__dirname, '../../functions/src');
   const cache = new Map();
   function load(filename) {
@@ -14,7 +14,7 @@ exports.loadBackend = function loadBackend(entry, dependencies) {
     const { outputText } = ts.transpileModule(source, { compilerOptions: {
       module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2021,
     } });
-    vm.runInNewContext(outputText, { exports, Date, require(name) {
+    vm.runInNewContext(outputText, { ...globals, exports, Date, require(name) {
       if (Object.hasOwn(dependencies, name)) return dependencies[name];
       if (!name.startsWith('.')) throw new Error(`Unexpected dependency: ${name}`);
       const resolved = path.resolve(path.dirname(filename), `${name}.ts`);

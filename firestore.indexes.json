@@ -78,5 +78,7 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    { "collectionGroup": "addressSearchLimits", "fieldPath": "expiresAt", "ttl": true, "indexes": [] }
+  ]
 }

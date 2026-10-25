@@ -39,7 +39,7 @@ exports.mount = function mount(file, exportName, dependencies, sourceOverride) {
   const { outputText } = ts.transpileModule(source, { compilerOptions: {
     module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React, esModuleInterop: true,
   } });
-  vm.runInNewContext(outputText, { exports, require(name) {
+  vm.runInNewContext(outputText, { exports, setTimeout, clearTimeout, require(name) {
     if (name === 'react') return react;
     if (Object.hasOwn(dependencies, name)) return dependencies[name];
     throw new Error(`Unexpected dependency ${name}`);
