@@ -4,7 +4,7 @@ const { loadBackend } = require('./helpers/backend.cjs');
 
 function setup(status = 'confirmed') {
   const records = new Map([['bookings/booking', { buyerId: 'buyer', sellerId: 'seller', spotTitle: 'Parking', status }]]);
-  const snapshot = ref => ({ data: () => records.get(ref.path) });
+  const snapshot = ref => ({ exists: records.has(ref.path), data: () => records.get(ref.path) });
   const doc = path => ({ path, get: async () => snapshot({ path }),
     set: async data => records.set(path, { ...data }),
     collection: name => ({ doc: id => doc(`${path}/${name}/${id}`) }) });
@@ -26,6 +26,16 @@ function setup(status = 'confirmed') {
   return { records, call, send };
 }
 const rejects = (promise, code) => assert.rejects(promise, error => error.code === code);
+test('deleting and deleted participants cannot receive new conversation data', async () => {
+  for (const uid of ['buyer', 'seller']) {
+    const f = setup(); f.records.set(`accountDeletions/${uid}`, { status: 'pending' });
+    await rejects(f.send(), 'failed-precondition');
+    await rejects(f.call('setBookingChatBlocked', 'buyer', { blocked: true }), 'failed-precondition');
+    assert.equal(f.records.has('bookings/booking/messages/message'), false);
+  }
+  const f = setup('completed'); f.records.get('bookings/booking').sellerAccountDeleted = true;
+  await rejects(f.send(), 'failed-precondition');
+});
 
 test('chat requires authentication and booking membership for every action', async () => {
   const { call, records } = setup();

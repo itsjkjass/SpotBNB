@@ -3,10 +3,11 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-nati
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { colors, radius, spacing } from "../../constants/theme";
-import { WEBSITE_URL } from "../../constants/publicLinks";
+import { WEBSITE_URL, SUPPORT_EMAIL } from "../../constants/publicLinks";
 import { openPublicLink } from "../../utils/openPublicLink";
 
 const questions = [
+  ["How do I delete my account?", "Open Profile → Delete account and confirm your password. Finish or cancel active bookings and settle earnings first. For deletion without the app, email spotbnb1@gmail.com from your account email. Support will confirm ownership before acting."],
   ["How do I find parking?", "Explore available spaces in Explore. Open a listing to see its address, price and details. You can browse before creating an account; sign in when you are ready to book."],
   ["How do bookings and payments work?", "Choose a space and your calendar dates, then review the total before paying. Check Bookings for the confirmed status. If you close the payment sheet, continue payment from the same checkout. If you already left checkout, check the booking status before making another reservation."],
   ["How do I list my space?", "Open Host and publish your space. You can receive bookings before setting up payouts. Use the visibility switch to hide a listing when you do not want new bookings."],
@@ -23,7 +24,7 @@ export default function HelpScreen({ navigation }: NativeStackScreenProps<RootSt
     <Text style={styles.body}>A quick guide to finding, booking and sharing parking with SpotBnB.</Text>
     <TouchableOpacity style={styles.action} onPress={() => navigation.navigate("Tutorial")}><Text style={styles.link}>Show the app tour →</Text></TouchableOpacity>
     {questions.map(([question, answer]) => <View key={question} style={styles.section}><Text style={styles.title}>{question}</Text><Text style={styles.body}>{answer}</Text></View>)}
-    <View style={styles.notice}><Text style={styles.title}>Contact support</Text><Text style={styles.body}>Support contact details are coming soon. During testing, report problems to the person who invited you to test SpotBnB. For an immediate safety emergency, contact your local emergency services.</Text></View>
+    <View style={styles.notice}><Text style={styles.title}>Contact support</Text><Text style={styles.body}>Email SpotBnB for booking, payment, privacy or account-deletion help. For an immediate safety emergency, contact your local emergency services.</Text><TouchableOpacity accessibilityRole="link" style={styles.action} onPress={() => void openPublicLink(`mailto:${SUPPORT_EMAIL}`)}><Text selectable style={styles.link}>{SUPPORT_EMAIL}</Text></TouchableOpacity></View>
     <TouchableOpacity accessibilityRole="link" style={styles.action} onPress={() => navigation.navigate("Privacy")}><Text style={styles.link}>Privacy policy →</Text></TouchableOpacity>
     <TouchableOpacity accessibilityRole="link" style={styles.action} onPress={() => void openPublicLink(WEBSITE_URL)}><Text style={styles.link}>Visit SpotBnB website →</Text></TouchableOpacity>
   </ScrollView>;

@@ -4,17 +4,28 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
 const { ref, uploadBytes, getBytes, getDownloadURL, deleteObject } = require('firebase/storage');
+const { doc, setDoc } = require('firebase/firestore');
 let env;
 before(async () => {
   assert.ok(process.env.FIREBASE_STORAGE_EMULATOR_HOST, 'Run with npm run test:rules.');
-  env = await initializeTestEnvironment({ projectId: 'demo-spotbnb-rules', storage: {
+  env = await initializeTestEnvironment({ projectId: 'demo-spotbnb-rules', firestore: {
+    rules: fs.readFileSync(path.resolve(__dirname, '../../firestore.rules'), 'utf8'),
+  }, storage: {
     rules: fs.readFileSync(path.resolve(__dirname, '../../storage.rules'), 'utf8'),
   } });
 });
-beforeEach(async () => env.clearStorage());
+beforeEach(async () => { await env.clearStorage(); await env.clearFirestore(); });
 after(async () => { if (env) await env.cleanup(); });
 const image = new Uint8Array([137, 80, 78, 71]);
 const object = (context, name = 'spots/seller/photo.png') => ref(context.storage(), name);
+test('deletion prevents old sessions from uploading or changing photos', async () => {
+  const context = env.authenticatedContext('seller');
+  await assertSucceeds(uploadBytes(object(context), image, { contentType: 'image/png' }));
+  await env.withSecurityRulesDisabled(ctx => setDoc(doc(ctx.firestore(), 'accountDeletions/seller'), { status: 'pending' }));
+  await assertFails(uploadBytes(object(context, 'spots/seller/late.png'), image, { contentType: 'image/png' }));
+  await assertFails(uploadBytes(object(context), image, { contentType: 'image/png' }));
+  await assertFails(deleteObject(object(context)));
+});
 test('owner can upload, replace, obtain a photo URL and delete before creating a listing or payouts', async () => {
   const photo = object(env.authenticatedContext('seller'));
   await assertSucceeds(uploadBytes(photo, image, { contentType: 'image/png' }));

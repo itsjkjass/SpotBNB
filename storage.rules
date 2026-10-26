@@ -7,9 +7,11 @@ service firebase.storage {
       // request.resource is null on delete, so size/contentType checks only apply to create/update.
       allow create, update: if request.auth != null
         && request.auth.uid == ownerId
+        && !firestore.exists(/databases/(default)/documents/accountDeletions/$(request.auth.uid))
         && request.resource.size < 10 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
-      allow delete: if request.auth != null && request.auth.uid == ownerId;
+      allow delete: if request.auth != null && request.auth.uid == ownerId
+        && !firestore.exists(/databases/(default)/documents/accountDeletions/$(request.auth.uid));
     }
   }
 }

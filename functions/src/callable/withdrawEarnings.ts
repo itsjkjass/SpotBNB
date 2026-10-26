@@ -4,6 +4,7 @@ import { db } from "../admin";
 import { getStripeClient } from "../stripeClient";
 import { stripeSecretKey, PAYMENT_RECHECK_MS } from "../config";
 import { readBookingCharge, reconcileSellerTransfer, sellerAmount, transferGroup } from "../services/sellerEarnings";
+import { assertAccountActive } from "../services/accountAccess";
 
 export const withdrawBookingEarnings = onCall<{ bookingId: string }>(
   { secrets: [stripeSecretKey], timeoutSeconds: 120, maxInstances: 3 },
@@ -15,6 +16,7 @@ export const withdrawBookingEarnings = onCall<{ bookingId: string }>(
       throw new HttpsError("invalid-argument", "Invalid booking ID.");
     }
     const bookingRef = db.collection("bookings").doc(bookingId);
+    await assertAccountActive(uid);
     const entryRef = db.collection("sellerTransfers").doc(bookingId);
     const userRef = db.collection("users").doc(uid);
     const booking = (await bookingRef.get()).data();
@@ -41,6 +43,7 @@ export const withdrawBookingEarnings = onCall<{ bookingId: string }>(
       }
       const amount = sellerAmount(booking);
       await db.runTransaction(async transaction => {
+        await assertAccountActive(uid, transaction);
         const current = (await transaction.get(bookingRef)).data();
         const entry = await transaction.get(entryRef);
         const currentUser = (await transaction.get(userRef)).data();

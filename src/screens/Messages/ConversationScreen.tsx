@@ -41,7 +41,8 @@ function BookingConversation({ bookingId }: { bookingId: string }) {
   const isBuyer = booking?.buyerId === user?.uid;
   const ownBlocked = isBuyer ? conversation?.buyerBlocked : conversation?.sellerBlocked;
   const blocked = conversation?.buyerBlocked || conversation?.sellerBlocked;
-  const canSend = booking && ["confirmed", "completed"].includes(booking.status) && !blocked && !error;
+  const accountDeleted = booking?.buyerAccountDeleted || booking?.sellerAccountDeleted;
+  const canSend = booking && ["confirmed", "completed"].includes(booking.status) && !accountDeleted && !blocked && !error;
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -49,7 +50,10 @@ function BookingConversation({ bookingId }: { bookingId: string }) {
     setLoading(true); setError(null); setBooking(null); setConversation(null); setMessages([]); setHasOlder(false); setOlderBusy(false); cursor.current = undefined;
     const fail = () => { if (active) { setError("Couldn't load this conversation. Check your connection and try again."); setLoading(false); } };
     const stops = [
-      subscribeBooking(bookingId, data => { if (active) { setBooking(data); setLoading(false); if (!data) fail(); } }, fail),
+      subscribeBooking(bookingId, data => { if (active) {
+        setBooking(data); setLoading(false); if (!data) fail();
+        if (data?.buyerAccountDeleted || data?.sellerAccountDeleted) { setMessages([]); setHasOlder(false); cursor.current = undefined; }
+      } }, fail),
       subscribeConversation(bookingId, data => { if (active) setConversation(data); }, fail),
       subscribeChat(bookingId, (data, oldest) => {
         if (!active) return;
@@ -112,16 +116,16 @@ function BookingConversation({ bookingId }: { bookingId: string }) {
     <View style={styles.header}><Text style={styles.title}>{booking?.spotTitle ?? "Booking conversation"}</Text>
       {booking && <DocumentBadge uid={isBuyer ? booking.sellerId : booking.buyerId} role={isBuyer ? "seller" : "buyer"} />}
       <Text style={styles.muted}>Chat with the {isBuyer ? "seller" : "buyer"}. Hold a received message to report it.</Text>
-      {booking && <TouchableOpacity onPress={block}><Text style={styles.link}>{ownBlocked ? "Unblock messages" : "Block messages"}</Text></TouchableOpacity>}
+      {booking && !accountDeleted && <TouchableOpacity onPress={block}><Text style={styles.link}>{ownBlocked ? "Unblock messages" : "Block messages"}</Text></TouchableOpacity>}
     </View>
     {error && <View style={styles.header}><Text accessibilityRole="alert" style={styles.error}>{error}</Text><TouchableOpacity onPress={() => setAttempt(n => n + 1)}><Text style={styles.link}>Try again</Text></TouchableOpacity></View>}
-    <FlatList inverted data={messages} keyExtractor={item => item.id} contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled"
+    <FlatList inverted data={accountDeleted ? [] : messages} keyExtractor={item => item.id} contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled"
       ListEmptyComponent={<Text style={[styles.muted, { textAlign: "center" }]}>No messages yet.</Text>}
-      ListFooterComponent={hasOlder ? <TouchableOpacity disabled={olderBusy} onPress={older}><Text style={styles.link}>{olderBusy ? "Loading…" : "Load older messages"}</Text></TouchableOpacity> : null}
+      ListFooterComponent={hasOlder && !accountDeleted ? <TouchableOpacity disabled={olderBusy} onPress={older}><Text style={styles.link}>{olderBusy ? "Loading…" : "Load older messages"}</Text></TouchableOpacity> : null}
       renderItem={({ item }) => <TouchableOpacity activeOpacity={0.9} onLongPress={() => report(item)} style={[styles.bubble, item.senderId === user?.uid ? styles.own : styles.received]}>
         <Text style={styles.messageText}>{item.text}</Text><Text style={styles.time}>{new Date(item.createdAt).toLocaleString()}</Text>
       </TouchableOpacity>} />
-    {!canSend && <Text style={styles.notice}>{blocked ? "Messaging is blocked for this booking." : booking?.status === "cancelled" ? "This booking was cancelled. You can still read past messages." : "Messaging becomes available when your booking is confirmed."}</Text>}
+    {!canSend && <Text style={styles.notice}>{accountDeleted ? "This conversation was removed because a participant deleted their account." : blocked ? "Messaging is blocked for this booking." : booking?.status === "cancelled" ? "This booking was cancelled. You can still read past messages." : "Messaging becomes available when your booking is confirmed."}</Text>}
     <View style={styles.composer}><TextInput placeholderTextColor={colors.textMuted} selectionColor={colors.primary} keyboardAppearance="light" accessibilityLabel="Message" value={text} onChangeText={setText} maxLength={2000} multiline editable={!!canSend && !sending} placeholder="Write a message…" style={styles.input} />
       <TouchableOpacity accessibilityRole="button" accessibilityLabel="Send message" disabled={!canSend || !text.trim() || sending} onPress={send} style={[styles.send, (!canSend || !text.trim() || sending) && { opacity: 0.5 }]}>
         {sending ? <ActivityIndicator color="white" /> : <Text style={styles.sendText}>Send</Text>}

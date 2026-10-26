@@ -4,6 +4,7 @@ import ProfileScreen from "../screens/Profile/ProfileScreen";
 import SellerOnboardingScreen from "../screens/Profile/SellerOnboardingScreen";
 import DocumentCheckScreen from "../screens/Profile/DocumentCheckScreen";
 import EarningsScreen from "../screens/Profile/EarningsScreen";
+import DeleteAccountScreen from "../screens/Profile/DeleteAccountScreen";
 import type { ProfileStackParamList } from "./types";
 import { colors } from "../constants/theme";
 
@@ -16,6 +17,7 @@ export default function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={{ animation: reducedMotion ? "none" : "slide_from_right", headerTintColor: colors.primary, headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false, headerTitleStyle: { fontSize: 18, fontWeight: "600" }, contentStyle: { backgroundColor: colors.background } }}>
       <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: "Profile" }} />
+      <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} options={{ title: "Delete account" }} />
       <Stack.Screen name="Earnings" component={EarningsScreen} options={{ title: "Earnings" }} />
       <Stack.Screen name="DocumentCheck" component={DocumentCheckScreen} options={{ title: "Document checks" }} />
       <Stack.Screen

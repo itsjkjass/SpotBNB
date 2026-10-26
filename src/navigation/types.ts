@@ -27,6 +27,7 @@ export type BookingsStackParamList = {
 
 export type ProfileStackParamList = {
   Profile: undefined;
+  DeleteAccount: undefined;
   Earnings: undefined;
   SellerOnboarding: undefined;
   DocumentCheck: undefined;

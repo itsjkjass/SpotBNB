@@ -2,12 +2,13 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { loadBackend } = require('./helpers/backend.cjs');
 
-function fixture(prices = {}, mode = 'test') {
+function fixture(prices = {}, mode = 'test', deleting = null) {
   const writes = [];
   let reads = 0;
   let payments = 0;
   const query = { where() { return this; } };
   const db = {
+    doc: path => ({ path, get: async () => ({ exists: path === `accountDeletions/${deleting}` }) }),
     collection(name) {
       reads++;
       if (name === 'bookings') return { ...query, doc: () => ({ id: 'booking' }) };
@@ -15,7 +16,7 @@ function fixture(prices = {}, mode = 'test') {
         ? { ownerId: 'seller', title: 'Parking', address: 'Test', isActive: true, pricePerDay: 5, ...prices }
         : { stripeConnectOnboarded: false } }) }) };
     },
-    runTransaction: async callback => callback({ get: async () => ({ docs: [] }), set: (_, value) => writes.push(value) }),
+    runTransaction: async callback => callback({ get: async ref => ref.get ? ref.get() : ({ docs: [] }), set: (_, value) => writes.push(value) }),
   };
   class HttpsError extends Error { constructor(code, message) { super(message); this.code = code; } }
   const { createBooking } = loadBackend('callable/createBooking.ts', {
@@ -36,6 +37,13 @@ test('malformed request bodies fail before database access', async () => {
     const f = fixture();
     await assert.rejects(f.run(data), { code: 'invalid-argument' });
     assert.equal(f.reads(), 0);
+  }
+});
+test('deletion of either participant prevents a new booking and payment', async () => {
+  for (const uid of ['buyer', 'seller']) {
+    const f = fixture({}, 'test', uid);
+    await assert.rejects(f.run(f.valid), { code: 'failed-precondition' });
+    assert.equal(f.writes.length, 0); assert.equal(f.payments(), 0);
   }
 });
 

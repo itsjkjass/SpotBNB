@@ -79,6 +79,9 @@
     }
   ],
   "fieldOverrides": [
-    { "collectionGroup": "addressSearchLimits", "fieldPath": "expiresAt", "ttl": true, "indexes": [] }
+    { "collectionGroup": "addressSearchLimits", "fieldPath": "expiresAt", "ttl": true, "indexes": [] },
+    { "collectionGroup": "accountDeletions", "fieldPath": "expiresAt", "ttl": true, "indexes": [] },
+    { "collectionGroup": "bookings", "fieldPath": "expiresAt", "ttl": true, "indexes": [] },
+    { "collectionGroup": "sellerTransfers", "fieldPath": "expiresAt", "ttl": true, "indexes": [] }
   ]
 }

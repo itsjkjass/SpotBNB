@@ -15,6 +15,7 @@ function fixture({ failLink = false } = {}) {
     },
     '../config': { stripeSecretKey: { value: () => secret } },
     '../admin': { app: { options: { projectId: 'spotbnb-test' } }, db: {
+      doc: () => ({ get: async () => ({ exists: false }) }),
       collection: () => ({ doc: () => ({ get: async () => ({ data: () => ({ stripeConnectAccountId: 'acct_seller' }) }) }) }),
     } },
     '../stripeClient': { getStripeClient: () => ({ accountLinks: { create: async data => {
@@ -98,6 +99,7 @@ test('racing onboarding requests reuse the account and cannot replace an attache
     '../config': { stripeSecretKey: { value: () => 'fixture-only' } },
     '../connectOnboarding': { createRefreshToken: () => 'fixture-token', onboardingCallbacks: () => ({}) },
     '../admin': { app: { options: { projectId: 'fixture-project' } }, db: {
+      doc: () => ({ get: async () => ({ exists: false }) }),
       collection: () => ({ doc: () => userRef }),
       runTransaction: fn => {
         const run = queue.then(() => fn({ get: ref => ref.get(), update: (_, changes) => Object.assign(user, changes) }));

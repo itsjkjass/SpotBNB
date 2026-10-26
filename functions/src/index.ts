@@ -12,3 +12,5 @@ export { getDocumentCheckSettings, submitDocumentCheck, removeDocumentCheck } fr
 export { withdrawBookingEarnings } from "./callable/withdrawEarnings";
 export { reconcileSellerTransfers } from "./scheduled/reconcileSellerTransfers";
 export { searchAddresses } from "./callable/addresses";
+export { requestAccountDeletion } from "./callable/deleteAccount";
+export { onAccountDeletionRequested, retryAccountDeletions } from "./scheduled/accountDeletions";

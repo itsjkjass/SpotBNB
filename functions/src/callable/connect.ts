@@ -3,6 +3,7 @@ import { app, db } from "../admin";
 import { getStripeClient } from "../stripeClient";
 import { stripeSecretKey } from "../config";
 import { createRefreshToken, onboardingCallbacks } from "../connectOnboarding";
+import { assertAccountActive } from "../services/accountAccess";
 
 export const createConnectOnboardingLink = onCall(
   { secrets: [stripeSecretKey] },
@@ -13,6 +14,7 @@ export const createConnectOnboardingLink = onCall(
     }
 
     const userRef = db.collection("users").doc(uid);
+    await assertAccountActive(uid);
     const userSnap = await userRef.get();
     const user = userSnap.data();
     if (!user) {
@@ -34,6 +36,7 @@ export const createConnectOnboardingLink = onCall(
         business_type: "individual",
       }, { idempotencyKey: `seller-connect-${uid}` });
       accountId = await db.runTransaction(async transaction => {
+        await assertAccountActive(uid, transaction);
         const current = (await transaction.get(userRef)).data();
         if (!current) throw new HttpsError("not-found", "User profile not found.");
         if (current.stripeConnectAccountId) return current.stripeConnectAccountId as string;
@@ -61,6 +64,7 @@ export const getConnectAccountStatus = onCall(
     }
 
     const userSnap = await db.collection("users").doc(uid).get();
+    await assertAccountActive(uid);
     const user = userSnap.data();
     if (!user?.stripeConnectAccountId) {
       return { onboarded: false, payoutsEnabled: false, transfersEnabled: false };
@@ -72,7 +76,10 @@ export const getConnectAccountStatus = onCall(
     const payoutsEnabled = Boolean(account.payouts_enabled);
 
     if (onboarded !== user.stripeConnectOnboarded) {
-      await db.collection("users").doc(uid).update({ stripeConnectOnboarded: onboarded });
+      await db.runTransaction(async tx => {
+        await assertAccountActive(uid, tx);
+        tx.update(db.collection("users").doc(uid), { stripeConnectOnboarded: onboarded });
+      });
     }
 
     return { onboarded, payoutsEnabled, transfersEnabled: account.capabilities?.transfers === "active" };

@@ -23,6 +23,7 @@ function fixture({ timeoutOnce = false, failSaveOnce = false } = {}) {
   };
   const query = { where() { return this; } };
   const db = {
+    doc: () => ({ get: async () => ({ exists: false }) }),
     collection(name) {
       if (name === 'bookings') return { ...query, doc: () => bookingRef };
       return { doc: () => ({ get: async () => ({ exists: true, data: () => name === 'spots'
@@ -30,7 +31,7 @@ function fixture({ timeoutOnce = false, failSaveOnce = false } = {}) {
         : { stripeConnectAccountId: 'acct_seller', stripeConnectOnboarded: true } }) }) };
     },
     runTransaction: async (callback) => callback({
-      get: async (ref) => ref === bookingRef ? bookingRef.get() : { docs: [] },
+      get: async (ref) => ref.get ? ref.get() : { docs: [] },
       set: (_, data) => { booking = data; },
       update: (_, data) => bookingRef.update(data),
     }),

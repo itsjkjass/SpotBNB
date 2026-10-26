@@ -55,6 +55,8 @@ export type BookingStatus =
 
 export interface Booking {
   id: string;
+  buyerAccountDeleted?: boolean;
+  sellerAccountDeleted?: boolean;
   spotId: string;
   spotTitle: string;
   spotAddress: string;

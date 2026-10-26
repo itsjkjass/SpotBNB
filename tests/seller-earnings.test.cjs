@@ -24,7 +24,7 @@ function fixture({ loseResponse = false, failSave = false } = {}) {
     },
   });
   let queue = Promise.resolve();
-  const db = { collection: name => ({ doc: id => ref(`${name}/${id}`) }),
+  const db = { doc: ref, collection: name => ({ doc: id => ref(`${name}/${id}`) }),
     runTransaction(callback) {
       const next = queue.then(() => callback({ get: reference => reference.get(),
         update: (reference, data) => Object.assign(records.get(reference.path), data),

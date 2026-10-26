@@ -71,7 +71,7 @@ function setup({ enabled = true, review = async () => response('seller') } = {})
   const doc = path => ({ path });
   const db = { doc, runTransaction: async callback => {
     const writes = [];
-    await callback({ get: async ref => ({ data: () => records.get(ref.path) }),
+    await callback({ get: async ref => ({ exists: records.has(ref.path), data: () => records.get(ref.path) }),
       set: (ref, value, options) => writes.push(() => records.set(ref.path, { ...(options?.merge ? records.get(ref.path) : {}), ...value })),
       update: (ref, value) => writes.push(() => records.set(ref.path, { ...records.get(ref.path), ...value })),
     });

@@ -7,9 +7,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { logIn } from "../../services/auth";
+import { accountActionError, resetAccountPassword } from "../../services/accountDeletion";
 import { colors, spacing, radius } from "../../constants/theme";
 import type { AuthStackParamList } from "../../navigation/AuthStack";
 
@@ -20,6 +22,16 @@ export default function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleReset = async () => {
+    if (!email.trim()) { setError("Enter your account email first."); return; }
+    setLoading(true); setError(null);
+    try {
+      await resetAccountPassword(email);
+      Alert.alert("Check your email", "If this email has an account, you will receive a password-reset link. Check your spam folder too.");
+    } catch (e) { setError(accountActionError(e)); }
+    finally { setLoading(false); }
+  };
 
   const handleLogin = async () => {
     setError(null);
@@ -68,6 +80,9 @@ export default function LoginScreen({ navigation }: Props) {
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Log In</Text>}
       </MotionPressable>
 
+      <MotionPressable accessibilityRole="button" disabled={loading} onPress={() => void handleReset()}>
+        <Text style={styles.link}>Forgot password?</Text>
+      </MotionPressable>
       <MotionPressable onPress={() => navigation.navigate("Signup")}>
         <Text style={styles.link}>Don&apos;t have an account? Sign up</Text>
       </MotionPressable>

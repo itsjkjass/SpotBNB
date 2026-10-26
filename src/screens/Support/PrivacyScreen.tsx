@@ -1,7 +1,7 @@
 import React from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { colors, radius, spacing } from "../../constants/theme";
-import { PRIVACY_POLICY_URL, WEBSITE_URL } from "../../constants/publicLinks";
+import { PRIVACY_POLICY_URL, WEBSITE_URL, SUPPORT_EMAIL } from "../../constants/publicLinks";
 import { openPublicLink } from "../../utils/openPublicLink";
 import { Action } from "../../components/ui";
 
@@ -24,6 +24,10 @@ export default function PrivacyScreen() {
     <Text style={styles.body}>Messages are stored for the buyer and seller on that booking. A report saves the reported message and reason for SpotBnB. Push notifications use a generic message notice rather than displaying the message text.</Text>
     <Text style={styles.title}>Optional document checks</Text>
     <Text style={styles.body}>When available, document checks ask for a separate agreement before sending images to Google Gemini. SpotBnB processes those images for the request without saving them in its database or file storage. The app saves the result, expiry, consent time and submission limits. Other users see only the badge status. You can remove your check result from the document-check screen.</Text>
+    <Text style={styles.title}>Delete your account</Text>
+    <Text style={styles.body}>Open Profile → Delete account. Your login, profile, listings, photos, document-check results, reviews and booking conversations are removed, normally within 24 hours. Finish or cancel active bookings and settle earnings first. Limited booking/payment records without your profile details are retained for up to 7 years for financial records and disputes; a minimal deletion record is kept for 7 days to block old sessions. Stripe retains its own records under its privacy policy.</Text>
+    <Text style={styles.body}>To request deletion without the app, email {SUPPORT_EMAIL} from your account email. SpotBnB will confirm ownership before acting. You can also contact this address for privacy questions.</Text>
+    <Action secondary label="Contact SpotBnB" onPress={() => void openPublicLink(`mailto:${SUPPORT_EMAIL}`)} />
     <Action secondary label="Visit SpotBnB website" onPress={() => void openPublicLink(WEBSITE_URL)} />
   </ScrollView>;
 }

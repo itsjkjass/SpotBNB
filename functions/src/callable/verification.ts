@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { db } from "../admin";
 import { CONSENT_VERSION, evaluateReview, validateSubmission } from "../lib/documentReview";
 import { reviewDocuments } from "../lib/geminiReview";
+import { assertAccountActive } from "../services/accountAccess";
 
 const geminiKey = defineSecret("GEMINI_API_KEY");
 // Activate only after paid Gemini data handling and the privacy notice are configured.
@@ -24,6 +25,7 @@ export const submitDocumentCheck = onCall({ secrets: [geminiKey], timeoutSeconds
   const attemptId = randomUUID();
   const now = Date.now();
   await db.runTransaction(async tx => {
+    await assertAccountActive(uid, tx);
     const current = (await tx.get(ref)).data();
     if (current?.status === "processing" && now - current.updatedAt < 180_000) {
       throw new HttpsError("already-exists", "Your documents are still being checked.");
@@ -41,6 +43,7 @@ export const submitDocumentCheck = onCall({ secrets: [geminiKey], timeoutSeconds
   try {
     const outcome = evaluateReview(role, await reviewDocuments(geminiKey.value(), role, images));
     await db.runTransaction(async tx => {
+      await assertAccountActive(uid, tx);
       const current = (await tx.get(ref)).data();
       if (current?.attemptId !== attemptId || current.status !== "processing") return;
       tx.update(ref, { ...outcome, updatedAt: Date.now() });
@@ -63,6 +66,7 @@ export const removeDocumentCheck = onCall(async request => {
   if (role !== "buyer" && role !== "seller") throw new HttpsError("invalid-argument", "Choose buyer or seller.");
   const ref = db.doc(`documentChecks/${uid}/roles/${role}`);
   await db.runTransaction(async tx => {
+    await assertAccountActive(uid, tx);
     const current = (await tx.get(ref)).data();
     // Retain only daily rate-limit metadata, so removal cannot reset submission limits.
     tx.set(ref, { status: "not_checked", reasons: [], expiresAt: null, attemptId: null, updatedAt: Date.now(),

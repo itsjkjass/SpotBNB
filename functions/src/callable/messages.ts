@@ -1,6 +1,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import type { DocumentData } from "firebase-admin/firestore";
 import { db } from "../admin";
+import { assertAccountActive } from "../services/accountAccess";
 
 function id(value: unknown): string {
   if (typeof value !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(value)) {
@@ -34,6 +35,9 @@ export const sendBookingMessage = onCall(async request => {
   const messageRef = bookingRef.collection("messages").doc(messageId);
   await db.runTransaction(async tx => {
     const booking = participant((await tx.get(bookingRef)).data(), uid);
+    await assertAccountActive(booking.buyerId, tx);
+    await assertAccountActive(booking.sellerId, tx);
+    if (booking.buyerAccountDeleted || booking.sellerAccountDeleted) throw new HttpsError("failed-precondition", "This conversation is closed because a participant deleted their account.");
     const existing = (await tx.get(messageRef)).data();
     if (existing) {
       if (existing.senderId === uid && existing.text === text) return;
@@ -69,6 +73,7 @@ export const markBookingMessagesRead = onCall(async request => {
   const ref = db.doc(`conversations/${bookingId}`);
   await db.runTransaction(async tx => {
     const booking = participant((await tx.get(db.doc(`bookings/${bookingId}`))).data(), uid);
+    await assertAccountActive(uid, tx);
     const conversation = (await tx.get(ref)).data();
     // Don't clear unread messages that arrived after the client last rendered.
     if (conversation?.lastMessageId === messageId) {
@@ -86,6 +91,9 @@ export const setBookingChatBlocked = onCall(async request => {
   const ref = db.doc(`conversations/${bookingId}`);
   await db.runTransaction(async tx => {
     const booking = participant((await tx.get(db.doc(`bookings/${bookingId}`))).data(), uid);
+    await assertAccountActive(booking.buyerId, tx);
+    await assertAccountActive(booking.sellerId, tx);
+    if (booking.buyerAccountDeleted || booking.sellerAccountDeleted) throw new HttpsError("failed-precondition", "This conversation is closed because a participant deleted their account.");
     const conversation = (await tx.get(ref)).data() ?? conversationData(booking);
     tx.set(ref, { ...conversation, [uid === booking.buyerId ? "buyerBlocked" : "sellerBlocked"]: request.data.blocked });
   });
@@ -99,12 +107,16 @@ export const reportBookingMessage = onCall(async request => {
   const messageId = id(request.data?.messageId);
   const reason = request.data?.reason;
   if (!["harassment", "spam", "other"].includes(reason)) throw new HttpsError("invalid-argument", "Choose a report reason.");
-  participant((await db.doc(`bookings/${bookingId}`).get()).data(), uid);
-  const message = (await db.doc(`bookings/${bookingId}/messages/${messageId}`).get()).data();
-  if (!message || message.senderId === uid) throw new HttpsError("invalid-argument", "Select a message from the other participant.");
-  // One report per user/message, independent of retries. Private to backend operators.
-  await db.doc(`messageReports/${bookingId}_${messageId}_${uid}`).set({
-    bookingId, messageId, reporterId: uid, senderId: message.senderId, text: message.text, reason, createdAt: Date.now(),
+  await db.runTransaction(async tx => {
+    const booking = participant((await tx.get(db.doc(`bookings/${bookingId}`))).data(), uid);
+    await assertAccountActive(booking.buyerId, tx);
+    await assertAccountActive(booking.sellerId, tx);
+    if (booking.buyerAccountDeleted || booking.sellerAccountDeleted) throw new HttpsError("failed-precondition", "This conversation is closed.");
+    const message = (await tx.get(db.doc(`bookings/${bookingId}/messages/${messageId}`))).data();
+    if (!message || message.senderId === uid) throw new HttpsError("invalid-argument", "Select a message from the other participant.");
+    tx.set(db.doc(`messageReports/${bookingId}_${messageId}_${uid}`), {
+      bookingId, messageId, reporterId: uid, senderId: message.senderId, text: message.text, reason, createdAt: Date.now(),
+    });
   });
   return { ok: true };
 });

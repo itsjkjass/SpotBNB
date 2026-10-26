@@ -3,6 +3,7 @@ import { db } from "../admin";
 import { stripeSecretKey, PLATFORM_FEE_PERCENT, PAYMENT_HOLD_MS } from "../config";
 import { getOrCreateBookingPayment } from "../services/bookingPayment";
 import type Stripe from "stripe";
+import { assertAccountActive } from "../services/accountAccess";
 import { calendarDayCount, dailyRateCents, parkingTimeZone, quoteCalendarBooking } from "../lib/calendarDays";
 
 interface CreateBookingRequest {
@@ -103,6 +104,12 @@ export const createBooking = onCall<CreateBookingRequest>(
     // retries automatically if a concurrent booking for an overlapping slot commits first -
     // closing the race that a plain read-then-write would leave open.
     await db.runTransaction(async (transaction) => {
+      await assertAccountActive(uid, transaction);
+      await assertAccountActive(spot.ownerId, transaction);
+      const currentSpot = (await transaction.get(db.collection("spots").doc(spotId))).data();
+      if (!currentSpot?.isActive || currentSpot.ownerId !== spot.ownerId || currentSpot.pricePerDay !== spot.pricePerDay || currentSpot.timeZone !== spot.timeZone) {
+        throw new HttpsError("failed-precondition", "This listing changed. Reopen it before booking.");
+      }
       const overlappingQuery = db
         .collection("bookings")
         .where("spotId", "==", spotId)

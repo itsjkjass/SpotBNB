@@ -4,7 +4,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isSignedIn() {
-      return request.auth != null;
+      return request.auth != null
+        && !exists(/databases/$(database)/documents/accountDeletions/$(request.auth.uid));
     }
 
     function isOwner(userId) {
@@ -91,6 +92,9 @@ service cloud.firestore {
         return review.keys().hasOnly(['bookingId', 'spotId', 'authorId', 'targetId', 'rating', 'comment', 'createdAt'])
           && booking.buyerId == request.auth.uid
           && booking.status == 'completed'
+          && booking.get('buyerAccountDeleted', false) == false
+          && booking.get('sellerAccountDeleted', false) == false
+          && !exists(/databases/$(database)/documents/accountDeletions/$(booking.sellerId))
           && review.spotId == booking.spotId
           && review.targetId == booking.sellerId
           && review.rating is int && review.rating >= 1 && review.rating <= 5

@@ -45,6 +45,7 @@ export default function ProfileScreen({ navigation }: Props) {
     <AccountRow title="Help & support" detail="Booking, payments and common questions" icon="help-circle-outline" onPress={() => root()?.navigate("Help")} />
     <AccountRow title="Privacy policy" detail="How SpotBnB uses your information" icon="document-text-outline" onPress={() => root()?.navigate("Privacy")} />
     <AccountRow title="App guide" detail="Explore the app at your own pace" icon="compass-outline" onPress={() => root()?.navigate("Tutorial")} />
+    <AccountRow title="Delete account" detail="Permanently remove your account and personal data" icon="trash-outline" onPress={() => navigation.navigate("DeleteAccount")} />
     <View style={{ marginTop: spacing.lg }}><Action label="Sign out" secondary busy={busy} onPress={signOut} /></View>
   </ScrollView>{guideOverlay}</>;
 }

@@ -55,7 +55,7 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-spotbnb-rules --config firebase.test.json \"node --test tests/firestore/*.test.cjs tests/storage/*.test.cjs\"",
+    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-spotbnb-rules --config firebase.test.json \"node --test --test-concurrency=1 tests/firestore/*.test.cjs tests/storage/*.test.cjs\"",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",

@@ -71,7 +71,7 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
   const canCancel =
     (booking.status === "pending_payment" || booking.status === "confirmed") &&
     booking.startTime > now && !booking.cancellationRequestedAt;
-  const canReview = isBuyer && booking.status === "completed" && !reviewSubmitted;
+  const canReview = isBuyer && booking.status === "completed" && !booking.sellerAccountDeleted && !reviewSubmitted;
 
   const handleCancel = () => {
     Alert.alert(
@@ -125,7 +125,7 @@ export default function BookingDetailScreen({ route, navigation }: Props) {
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>{booking.spotTitle}</Text>
       <Text style={styles.address}>{booking.spotAddress}</Text>
-      {(booking.status === "confirmed" || booking.status === "completed") &&
+      {!booking.sellerAccountDeleted && (booking.status === "confirmed" || booking.status === "completed") &&
         <ParkingDirections coordinate={booking.spotLocation} spotId={booking.spotId} />}
 
       <View style={styles.row}>
