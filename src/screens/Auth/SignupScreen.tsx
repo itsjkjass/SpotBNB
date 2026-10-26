@@ -77,7 +77,7 @@ export default function SignupScreen({ navigation }: Props) {
       <MotionPressable onPress={() => navigation.navigate("Login")}>
         <Text style={styles.link}>Already have an account? Log in</Text>
       </MotionPressable>
-      <MotionPressable onPress={() => navigation.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate("Privacy")}><Text style={styles.link}>Privacy policy status</Text></MotionPressable>
+      <MotionPressable accessibilityRole="link" onPress={() => navigation.getParent<NativeStackNavigationProp<RootStackParamList>>()?.navigate("Privacy")}><Text style={styles.link}>Privacy policy</Text></MotionPressable>
     </KeyboardAvoidingView>
   );
 }

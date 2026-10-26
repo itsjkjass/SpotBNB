@@ -3,6 +3,8 @@ import { ActivityIndicator, Alert, Image, ScrollView, StyleSheet, Switch, Text, 
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../../hooks/useAuth";
 import { colors, radius, spacing } from "../../constants/theme";
+import { PRIVACY_POLICY_URL } from "../../constants/publicLinks";
+import { openPublicLink } from "../../utils/openPublicLink";
 import { CONSENT_VERSION, documentReason, getDocumentCheckSettings, removeDocumentCheck, requiredDocuments, submitDocumentCheck, subscribeDocumentCheck, type DocumentCheck, type DocumentImage, type DocumentRole } from "../../services/verification";
 
 export default function DocumentCheckScreen() {
@@ -105,6 +107,7 @@ function RoleDocuments({ role }: { role: DocumentRole }) {
         <Text style={styles.title}>Before you submit</Text>
         <Text style={styles.body}>SpotBnB sends these images to Google Gemini for automated checks of readability, matching details and dates. AI can make mistakes. This is not an official identity check, a selfie liveness test or confirmation from a document issuer.</Text>
         <Text style={styles.body}>SpotBnB processes images for this request without saving them to its database or file storage. We keep your check result, expiry, consent time and submission limits. Google may retain request data temporarily for abuse prevention under its paid-service terms. Other users see only your badge status.</Text>
+        <TouchableOpacity accessibilityRole="link" onPress={() => void openPublicLink(PRIVACY_POLICY_URL)}><Text style={styles.link}>Read privacy policy</Text></TouchableOpacity>
         <View style={styles.consent}><Switch value={consent} onValueChange={setConsent} disabled={busy || processing} accessibilityLabel="Agree to automated document checks" /><Text style={styles.consentText}>I am 18 or older, these are my documents, and I agree to send them to Google Gemini for this check.</Text></View>
       </View>
       <TouchableOpacity accessibilityRole="button" disabled={!consent || busy || processing || requiredDocuments[role].some(item => !images[item.kind])} onPress={submit} style={[styles.button, (!consent || busy || processing || requiredDocuments[role].some(item => !images[item.kind])) && styles.disabled]}>

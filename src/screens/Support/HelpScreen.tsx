@@ -3,6 +3,8 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-nati
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../../navigation/types";
 import { colors, radius, spacing } from "../../constants/theme";
+import { WEBSITE_URL } from "../../constants/publicLinks";
+import { openPublicLink } from "../../utils/openPublicLink";
 
 const questions = [
   ["How do I find parking?", "Explore available spaces in Explore. Open a listing to see its address, price and details. You can browse before creating an account; sign in when you are ready to book."],
@@ -22,7 +24,8 @@ export default function HelpScreen({ navigation }: NativeStackScreenProps<RootSt
     <TouchableOpacity style={styles.action} onPress={() => navigation.navigate("Tutorial")}><Text style={styles.link}>Show the app tour →</Text></TouchableOpacity>
     {questions.map(([question, answer]) => <View key={question} style={styles.section}><Text style={styles.title}>{question}</Text><Text style={styles.body}>{answer}</Text></View>)}
     <View style={styles.notice}><Text style={styles.title}>Contact support</Text><Text style={styles.body}>Support contact details are coming soon. During testing, report problems to the person who invited you to test SpotBnB. For an immediate safety emergency, contact your local emergency services.</Text></View>
-    <TouchableOpacity style={styles.action} onPress={() => navigation.navigate("Privacy")}><Text style={styles.link}>Privacy policy status →</Text></TouchableOpacity>
+    <TouchableOpacity accessibilityRole="link" style={styles.action} onPress={() => navigation.navigate("Privacy")}><Text style={styles.link}>Privacy policy →</Text></TouchableOpacity>
+    <TouchableOpacity accessibilityRole="link" style={styles.action} onPress={() => void openPublicLink(WEBSITE_URL)}><Text style={styles.link}>Visit SpotBnB website →</Text></TouchableOpacity>
   </ScrollView>;
 }
 const styles = StyleSheet.create({

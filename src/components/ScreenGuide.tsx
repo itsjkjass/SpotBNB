@@ -25,7 +25,7 @@ const STEPS: Record<GuideFlow, Step[]> = {
     { title: "Find the booking you need", body: "Upcoming & current includes parking in progress. Past includes completed and cancelled bookings. Open a booking to check payment status, message the other person or see available actions." },
   ],
   messages: [{ title: "Keep plans with the booking", body: "Conversations become available after a booking is confirmed. Open a booking to start a chat. Messages are text only; hold a received message to report it, or use Block messages in the conversation." }],
-  profile: [{ title: "Your account and setup", body: "Manage optional document checks, earnings and payout setup here. You can use the app without a document badge. Find Help, the privacy-policy draft and replayable guides below." }],
+  profile: [{ title: "Your account and setup", body: "Manage optional document checks, earnings and payout setup here. You can use the app without a document badge. Find Help, the privacy policy and replayable guides below." }],
 };
 type Request = { flow: GuideFlow; id: number } | null;
 const GuideContext = createContext<{ request: Request; replay: (flow: GuideFlow) => void }>({ request: null, replay: () => {} });

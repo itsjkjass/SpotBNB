@@ -43,7 +43,7 @@ export default function ProfileScreen({ navigation }: Props) {
     <AccountRow title="Payout setup" detail={profile?.stripeConnectOnboarded ? "Details submitted · check your payout status" : "Set up before withdrawing your earnings"} icon="card-outline" onPress={() => navigation.navigate("SellerOnboarding")} />
     <Text style={styles.section}>Help & information</Text>
     <AccountRow title="Help & support" detail="Booking, payments and common questions" icon="help-circle-outline" onPress={() => root()?.navigate("Help")} />
-    <AccountRow title="Privacy policy" detail="How information is used · testing draft" icon="document-text-outline" onPress={() => root()?.navigate("Privacy")} />
+    <AccountRow title="Privacy policy" detail="How SpotBnB uses your information" icon="document-text-outline" onPress={() => root()?.navigate("Privacy")} />
     <AccountRow title="App guide" detail="Explore the app at your own pace" icon="compass-outline" onPress={() => root()?.navigate("Tutorial")} />
     <View style={{ marginTop: spacing.lg }}><Action label="Sign out" secondary busy={busy} onPress={signOut} /></View>
   </ScrollView>{guideOverlay}</>;
