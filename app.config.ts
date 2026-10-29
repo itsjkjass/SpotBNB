@@ -1,6 +1,6 @@
 import type { ExpoConfig, ConfigContext } from "expo/config";
 
-const ANDROID_PACKAGE = "com.spotbnb.app";
+const ANDROID_PACKAGE = "com.spotbnb.myapp";
 const IOS_BUNDLE_ID = "com.spotbnb.app";
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
